@@ -18,17 +18,17 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push("/login");
+      router.replace("/login");
     }
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-navy-950 flex flex-col items-center justify-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple to-gold flex items-center justify-center shadow-glow animate-pulse">
+      <div className="min-h-screen bg-[#F1F6FB] flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-[#172F4D] flex items-center justify-center shadow-sm animate-pulse">
           <Shield className="w-7 h-7 text-white" />
         </div>
-        <p className="text-sm font-mono text-slate-400">
+        <p className="text-sm font-mono text-[#71849A]">
           Securing session & loading cyber defense dashboard...
         </p>
       </div>
@@ -36,16 +36,16 @@ export default function DashboardLayout({
   }
 
   if (!isAuthenticated) {
-    return null; // Will redirect via useEffect
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-navy-950 flex">
+    <div className="min-h-screen bg-[#F1F6FB] flex">
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-72">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 bg-[#F1F6FB]">
         <DashboardNavbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto space-y-6">
           {children}

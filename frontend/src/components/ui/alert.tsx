@@ -10,24 +10,24 @@ interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Alert({ variant = "info", title, children, className, ...props }: AlertProps) {
   const variantStyles = {
     danger: {
-      box: "bg-crimson/15 border-crimson/40 text-red-100",
-      icon: <ShieldAlert className="w-5 h-5 text-crimson-light shrink-0 mt-0.5" />,
-      titleColor: "text-white font-bold",
+      box: "bg-red-50 border-red-200 text-red-900",
+      icon: <ShieldAlert className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />,
+      titleColor: "text-red-950 font-bold",
     },
     warning: {
-      box: "bg-gold/15 border-gold/40 text-amber-100",
-      icon: <AlertTriangle className="w-5 h-5 text-gold shrink-0 mt-0.5" />,
-      titleColor: "text-gold font-bold",
+      box: "bg-amber-50 border-amber-200 text-amber-900",
+      icon: <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />,
+      titleColor: "text-amber-950 font-bold",
     },
     success: {
-      box: "bg-emerald-500/15 border-emerald-500/40 text-emerald-100",
-      icon: <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />,
-      titleColor: "text-emerald-300 font-bold",
+      box: "bg-emerald-50 border-emerald-200 text-emerald-900",
+      icon: <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />,
+      titleColor: "text-emerald-950 font-bold",
     },
     info: {
-      box: "bg-purple/15 border-purple/40 text-purple-100",
-      icon: <Info className="w-5 h-5 text-purple-light shrink-0 mt-0.5" />,
-      titleColor: "text-purple-light font-bold",
+      box: "bg-[#E1F1FB] border-[#DCE7F0] text-[#172F4D]",
+      icon: <Info className="w-5 h-5 text-[#172F4D] shrink-0 mt-0.5" />,
+      titleColor: "text-[#172F4D] font-bold",
     },
   };
 
@@ -37,7 +37,7 @@ export function Alert({ variant = "info", title, children, className, ...props }
     <div
       role="alert"
       className={cn(
-        "p-4 rounded-xl border flex gap-3.5 shadow-md backdrop-blur-sm",
+        "p-4 rounded-xl border flex gap-3.5 shadow-sm",
         current.box,
         className
       )}
@@ -46,7 +46,7 @@ export function Alert({ variant = "info", title, children, className, ...props }
       {current.icon}
       <div className="space-y-1 text-sm leading-relaxed">
         {title && <h5 className={cn("text-base leading-snug", current.titleColor)}>{title}</h5>}
-        <div className="text-slate-200">{children}</div>
+        <div className="text-[#172F4D]">{children}</div>
       </div>
     </div>
   );

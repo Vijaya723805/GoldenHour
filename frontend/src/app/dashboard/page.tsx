@@ -10,14 +10,14 @@ import {
   TrendingUp, 
   AlertOctagon, 
   Plus, 
-  RefreshCw,
-  Search,
-  PhoneCall,
-  Bot,
-  HelpCircle,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2
+  RefreshCw, 
+  Search, 
+  PhoneCall, 
+  Bot, 
+  HelpCircle, 
+  ArrowRight, 
+  ShieldCheck, 
+  CheckCircle2 
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -105,13 +105,13 @@ export default function DashboardPage() {
       {/* Header Welcome & Primary CTA */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] tracking-tight">
             {t("dash.welcome", "Welcome back")},{" "}
-            <span className="text-gold">{user?.full_name?.split(" ")[0] || "Citizen"}</span>
+            <span className="text-[#172F4D]">{user?.full_name?.split(" ")[0] || "Citizen"}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1">
+          <p className="text-xs sm:text-sm text-[#71849A] mt-1">
             {t("dash.overview", "Fintech Cyber Fraud Defense Overview")} • Primary Bank:{" "}
-            <span className="text-white font-semibold">{user?.bank_name || "State Bank of India"}</span>
+            <span className="text-[#172F4D] font-semibold">{user?.bank_name || "State Bank of India"}</span>
           </p>
         </div>
 
@@ -121,37 +121,37 @@ export default function DashboardPage() {
             size="sm"
             onClick={loadData}
             isLoading={isLoading}
-            className="text-xs text-slate-300 hover:text-white"
+            className="text-xs text-[#71849A] hover:text-[#172F4D]"
           >
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             Refresh
           </Button>
 
           <Link href="/dashboard/report">
-            <Button variant="gold" size="md" className="font-bold shadow-gold-glow gap-1.5 text-navy-950">
-              <Plus className="w-4 h-4 text-navy-950" />
+            <Button variant="primary" size="md" className="font-bold gap-1.5 text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-sm">
+              <Plus className="w-4 h-4 text-white" />
               <span>{t("nav.report", "Report a Fraud")}</span>
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Golden Hour Urgency Banner (If any active cases exist) */}
+      {/* Golden Hour Urgency Banner (Light Icy-Blue Information Banner) */}
       {stats && stats.active_golden_hour_cases > 0 && (
-        <div className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-crimson/25 via-navy-850 to-purple/20 border border-crimson/50 shadow-fintech">
+        <div className="relative overflow-hidden p-6 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] shadow-card">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <div className="p-3 rounded-xl bg-crimson/20 border border-crimson/40 text-crimson-light shrink-0">
+              <div className="p-3 rounded-xl bg-white border border-[#DCE7F0] text-red-600 shrink-0 shadow-sm">
                 <Clock className="w-6 h-6 animate-spin" style={{ animationDuration: "8s" }} />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base sm:text-lg font-bold text-white">
+                  <h3 className="text-base sm:text-lg font-bold text-[#172F4D]">
                     {t("banner.golden_hour", "Golden Hour Active")} ({stats.active_golden_hour_cases} Incident in Window)
                   </h3>
                   <Badge variant="crimson" className="text-[10px]">Critical 120-Minute Target</Badge>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-200 max-w-2xl leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#172F4D] max-w-2xl leading-relaxed">
                   {t(
                     "banner.golden_desc",
                     "You have an active incident reported within the 120-minute window. Inter-bank lien requests sent to the recipient bank have the maximum recovery rate right now."
@@ -162,18 +162,18 @@ export default function DashboardPage() {
 
             <div className="flex flex-wrap items-center gap-2.5 shrink-0">
               <a href="tel:1930">
-                <Button variant="danger" size="md" className="font-bold text-xs gap-1.5 shadow-crimson-glow">
+                <Button variant="danger" size="md" className="font-bold text-xs gap-1.5 shadow-sm">
                   <PhoneCall className="w-4 h-4" />
                   Call 1930
                 </Button>
               </a>
               <Link href="/dashboard/emergency">
-                <Button variant="gold" size="md" className="text-xs font-bold text-navy-950 shadow-gold-glow">
+                <Button variant="primary" size="md" className="text-xs font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-sm">
                   Emergency Checklist
                 </Button>
               </Link>
               <Link href="/dashboard/cases">
-                <Button variant="secondary" size="md" className="text-xs">
+                <Button variant="secondary" size="md" className="text-xs bg-white text-[#172F4D] border border-[#DCE7F0] hover:bg-[#F1F6FB]">
                   {t("banner.action", "View Active Case")}
                 </Button>
               </Link>
@@ -183,14 +183,14 @@ export default function DashboardPage() {
       )}
 
       {/* Senior Citizen & First-Time User Plain-Language Helper Card */}
-      <div className="p-4 rounded-xl bg-navy-850 border border-navy-750 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="p-4 rounded-2xl bg-white border border-[#DCE7F0] shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-gold/20 text-gold border border-gold/30 shrink-0">
-            <HelpCircle className="w-5 h-5 text-gold" />
+          <div className="p-2.5 rounded-xl bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] shrink-0">
+            <HelpCircle className="w-5 h-5 text-[#172F4D]" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white">Need Simple Guidance?</h4>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <h4 className="text-sm font-bold text-[#172F4D]">Need Simple Guidance?</h4>
+            <p className="text-xs text-[#71849A] mt-0.5">
               Not sure how to talk to your bank or find your 12-digit UTR? Our Multilingual AI Assistant has a dedicated Senior Citizen mode in English, Telugu, and Hindi.
             </p>
           </div>
@@ -210,95 +210,95 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
+      {/* 4 Metric Cards (Requirement 3: Elegant light-blue icon containers, Soft green for success) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Total Cases */}
-        <Card className="hover:border-purple/50 transition-colors">
+        <Card className="hover:border-[#477DA8] transition-all">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">
+              <span className="text-xs font-semibold text-[#71849A]">
                 {t("dash.total_cases", "Total Fraud Cases")}
               </span>
-              <div className="p-2.5 rounded-xl bg-purple/20 text-purple-light border border-purple/30">
-                <FolderLock className="w-4 h-4" />
+              <div className="p-2.5 rounded-xl bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0]">
+                <FolderLock className="w-4 h-4 text-[#172F4D]" />
               </div>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-white font-mono">
+              <span className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] font-mono">
                 {isLoading ? "--" : stats?.total_cases || 0}
               </span>
-              <span className="text-[11px] text-slate-300 font-medium">Logged</span>
+              <span className="text-[11px] text-[#71849A] font-medium">Logged</span>
             </div>
-            <p className="text-[11px] text-slate-400 pt-2 border-t border-navy-800">
+            <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
               Total incidents filed in account
             </p>
           </CardContent>
         </Card>
 
         {/* Cases in Preparation */}
-        <Card className="hover:border-gold/50 transition-colors">
+        <Card className="hover:border-[#477DA8] transition-all">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">
+              <span className="text-xs font-semibold text-[#71849A]">
                 {t("dash.in_preparation", "Cases in Preparation")}
               </span>
-              <div className="p-2.5 rounded-xl bg-gold/20 text-gold border border-gold/30">
-                <AlertOctagon className="w-4 h-4" />
+              <div className="p-2.5 rounded-xl bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0]">
+                <AlertOctagon className="w-4 h-4 text-[#172F4D]" />
               </div>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-gold font-mono">
+              <span className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] font-mono">
                 {isLoading ? "--" : stats?.cases_in_preparation || 0}
               </span>
-              <span className="text-[11px] text-amber-200 font-bold">Draft / Review</span>
+              <span className="text-[11px] text-amber-700 font-bold">Draft / Review</span>
             </div>
-            <p className="text-[11px] text-slate-400 pt-2 border-t border-navy-800">
+            <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
               Requires evidence or user verification
             </p>
           </CardContent>
         </Card>
 
-        {/* Submitted Complaints */}
-        <Card className="hover:border-emerald-500/50 transition-colors">
+        {/* Submitted Complaints (Soft green for successful complaints) */}
+        <Card className="hover:border-[#477DA8] transition-all">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">
+              <span className="text-xs font-semibold text-[#71849A]">
                 {t("dash.submitted", "Submitted Complaints")}
               </span>
-              <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                <FileCheck2 className="w-4 h-4" />
+              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <FileCheck2 className="w-4 h-4 text-emerald-600" />
               </div>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-mono">
+              <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700 font-mono">
                 {isLoading ? "--" : stats?.submitted_complaints || 0}
               </span>
-              <span className="text-[11px] text-emerald-300 font-bold">1930 / Portal</span>
+              <span className="text-[11px] text-emerald-800 font-bold">1930 / Portal</span>
             </div>
-            <p className="text-[11px] text-slate-400 pt-2 border-t border-navy-800">
+            <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
               Approved and lodged with authorities
             </p>
           </CardContent>
         </Card>
 
         {/* Recovered / Lien Staged */}
-        <Card className="hover:border-crimson/50 transition-colors">
+        <Card className="hover:border-[#477DA8] transition-all">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">
+              <span className="text-xs font-semibold text-[#71849A]">
                 {t("dash.recovered", "Recovered / Lien Staged")}
               </span>
-              <div className="p-2.5 rounded-xl bg-crimson/20 text-crimson-light border border-crimson/30">
-                <TrendingUp className="w-4 h-4" />
+              <div className="p-2.5 rounded-xl bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0]">
+                <TrendingUp className="w-4 h-4 text-[#172F4D]" />
               </div>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-xl sm:text-2xl font-extrabold text-white font-mono">
+              <span className="text-xl sm:text-2xl font-extrabold text-[#172F4D] font-mono">
                 {isLoading ? "--" : formatCurrency(stats?.total_amount_recovered || 0)}
               </span>
-              <span className="text-[11px] text-emerald-400 font-bold">Lien Staged</span>
+              <span className="text-[11px] text-emerald-700 font-bold">Lien Staged</span>
             </div>
-            <p className="text-[11px] text-slate-400 pt-2 border-t border-navy-800">
+            <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
               Of {formatCurrency(stats?.total_amount_defrauded || 0)} defrauded
             </p>
           </CardContent>
@@ -317,11 +317,11 @@ export default function DashboardPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Filter Tabs */}
-            <div className="flex rounded-xl bg-navy-950 p-1 border border-navy-800 text-xs">
+            <div className="flex rounded-xl bg-[#F1F6FB] p-1 border border-[#DCE7F0] text-xs">
               <button
                 onClick={() => setFilterTab("ALL")}
                 className={`px-3 py-1.5 rounded-lg transition-colors font-semibold ${
-                  filterTab === "ALL" ? "bg-purple text-white shadow-sm" : "text-slate-300 hover:text-white"
+                  filterTab === "ALL" ? "bg-[#172F4D] text-white shadow-sm" : "text-[#71849A] hover:text-[#172F4D]"
                 }`}
               >
                 {t("table.filter_all", "All Cases")}
@@ -329,7 +329,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setFilterTab("PREP")}
                 className={`px-3 py-1.5 rounded-lg transition-colors font-semibold ${
-                  filterTab === "PREP" ? "bg-purple text-white shadow-sm" : "text-slate-300 hover:text-white"
+                  filterTab === "PREP" ? "bg-[#172F4D] text-white shadow-sm" : "text-[#71849A] hover:text-[#172F4D]"
                 }`}
               >
                 {t("table.filter_prep", "In Prep")}
@@ -337,7 +337,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setFilterTab("SUBMITTED")}
                 className={`px-3 py-1.5 rounded-lg transition-colors font-semibold ${
-                  filterTab === "SUBMITTED" ? "bg-purple text-white shadow-sm" : "text-slate-300 hover:text-white"
+                  filterTab === "SUBMITTED" ? "bg-[#172F4D] text-white shadow-sm" : "text-[#71849A] hover:text-[#172F4D]"
                 }`}
               >
                 {t("table.filter_submitted", "Submitted")}
@@ -346,13 +346,13 @@ export default function DashboardPage() {
 
             {/* Search Input */}
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8CA0B3]" />
               <input
                 type="text"
                 placeholder="Search UTR or Case..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-3 py-2 rounded-xl bg-navy-950 border border-navy-750 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple w-44 sm:w-56"
+                className="pl-9 pr-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#8CA0B3] focus:outline-none focus:border-[#172F4D] focus:bg-white w-44 sm:w-56 transition-colors"
               />
             </div>
           </div>
@@ -361,22 +361,22 @@ export default function DashboardPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-12 text-center space-y-3">
-              <div className="w-8 h-8 mx-auto rounded-full border-2 border-purple border-t-transparent animate-spin" />
-              <p className="text-xs font-mono text-slate-400">Loading cases from database...</p>
+              <div className="w-8 h-8 mx-auto rounded-full border-2 border-[#172F4D] border-t-transparent animate-spin" />
+              <p className="text-xs font-mono text-[#71849A]">Loading cases from database...</p>
             </div>
           ) : filteredCases.length === 0 ? (
             <div className="p-12 text-center space-y-3">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-navy-950 border border-navy-800 flex items-center justify-center text-slate-400">
-                <FolderLock className="w-6 h-6" />
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-[#F1F6FB] border border-[#DCE7F0] flex items-center justify-center text-[#71849A]">
+                <FolderLock className="w-6 h-6 text-[#172F4D]" />
               </div>
-              <p className="text-sm font-bold text-white">
+              <p className="text-sm font-bold text-[#172F4D]">
                 {t("table.empty", "No fraud cases found.")}
               </p>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-[#71849A]">
                 Start by reporting an incident or uploading evidence.
               </p>
               <Link href="/dashboard/report">
-                <Button variant="gold" size="sm" className="mt-2 text-xs font-bold text-navy-950">
+                <Button variant="primary" size="sm" className="mt-2 text-xs font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60]">
                   Report a Fraud Now
                 </Button>
               </Link>
@@ -384,7 +384,7 @@ export default function DashboardPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-navy-950 border-b border-navy-800 text-slate-300 font-mono uppercase tracking-wider text-[11px]">
+                <thead className="bg-[#F1F6FB] border-b border-[#DCE7F0] text-[#71849A] font-mono uppercase tracking-wider text-[11px]">
                   <tr>
                     <th className="py-3.5 px-4 font-bold">{t("table.case_id", "Case ID")}</th>
                     <th className="py-3.5 px-4 font-bold">{t("table.title", "Incident Title")}</th>
@@ -396,40 +396,40 @@ export default function DashboardPage() {
                     <th className="py-3.5 px-4 text-right font-bold">{t("table.action", "Action")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-navy-800/80">
+                <tbody className="divide-y divide-[#DCE7F0]">
                   {filteredCases.map((c) => (
-                    <tr key={c.id} className="hover:bg-navy-900/60 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-gold">
+                    <tr key={c.id} className="hover:bg-[#F1F6FB]/80 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#172F4D]">
                         {c.case_number}
                         {c.golden_hour_active && (
-                          <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-crimson animate-ping" />
+                          <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-red-600 animate-ping" />
                         )}
                       </td>
                       <td className="py-3.5 px-4 max-w-xs">
-                        <p className="font-bold text-white truncate">{c.title}</p>
-                        <span className="text-[10px] text-purple-light font-mono">
+                        <p className="font-bold text-[#172F4D] truncate">{c.title}</p>
+                        <span className="text-[10px] text-[#71849A] font-mono">
                           {c.fraud_category.replace(/_/g, " ")}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-crimson-light">
+                      <td className="py-3.5 px-4 font-mono font-bold text-red-600">
                         {formatCurrency(c.amount_lost)}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-200">
+                      <td className="py-3.5 px-4 font-mono text-[#172F4D]">
                         {c.transaction_id_utr || "Pending"}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-300">
+                      <td className="py-3.5 px-4 font-mono text-[#71849A]">
                         {c.beneficiary_upi_id || "N/A"}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {getStatusBadge(c.status)}
                       </td>
-                      <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-[#71849A] whitespace-nowrap">
                         {formatDateTime(c.created_at)}
                       </td>
                       <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <Link href={`/dashboard/cases/${c.id}`}>
-                            <Button variant="gold" size="sm" className="text-xs py-1 px-3 font-bold text-navy-950 shadow-sm">
+                            <Button variant="primary" size="sm" className="text-xs py-1 px-3 font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-sm">
                               Track
                             </Button>
                           </Link>

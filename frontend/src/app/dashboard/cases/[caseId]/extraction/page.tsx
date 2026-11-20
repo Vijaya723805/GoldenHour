@@ -33,8 +33,7 @@ import {
   fetchCaseDetail, 
   fetchEvidenceExtraction, 
   triggerEvidenceExtraction, 
-  verifyExtractionResult,
-  fetchSampleExtraction 
+  verifyExtractionResult 
 } from "@/lib/api-client";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { 
@@ -79,11 +78,12 @@ export default function EvidenceExtractionPage() {
           setSelectedEvidenceId(firstEv);
           loadExtraction(firstEv);
         } else {
-          // If no evidence items, fallback to sample
-          loadSample();
+          setSelectedEvidenceId("");
+          setExtraction(null);
         }
       } else {
-        loadSample();
+        setSelectedEvidenceId("");
+        setExtraction(null);
       }
       setIsLoading(false);
     };
@@ -107,21 +107,11 @@ export default function EvidenceExtractionPage() {
           syncEditFields(triggerRes.data);
         }
       }
-    } catch {
-      loadSample();
+    } catch (err: any) {
+      setStatusMsg({ type: "error", text: err.message || "Failed to extract evidence parameters." });
     } finally {
       setIsExtracting(false);
     }
-  };
-
-  const loadSample = async () => {
-    setIsExtracting(true);
-    const sample = await fetchSampleExtraction();
-    if (sample.success && sample.data) {
-      setExtraction(sample.data);
-      syncEditFields(sample.data);
-    }
-    setIsExtracting(false);
   };
 
   const syncEditFields = (data: EvidenceExtractionResult) => {
@@ -217,7 +207,7 @@ export default function EvidenceExtractionPage() {
         );
       default:
         return (
-          <span className="text-[10px] text-slate-500 font-mono italic">
+          <span className="text-[10px] text-[#71849A] font-mono italic">
             Not Present
           </span>
         );
@@ -225,24 +215,24 @@ export default function EvidenceExtractionPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl animate-fadeIn">
+    <div className="space-y-6 max-w-6xl animate-fadeIn pb-12">
       {/* Top Breadcrumb & Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#DCE7F0] pb-4">
         <div>
           <Link
             href="/dashboard/cases"
-            className="inline-flex items-center gap-1.5 text-xs text-purple-light hover:text-white mb-2 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-[#71849A] hover:text-[#172F4D] mb-2 transition-colors font-medium"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to My Cases
           </Link>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] tracking-tight">
               AI-Powered Evidence Extraction
             </h1>
-            <Badge variant="default" className="text-xs">Module 3</Badge>
+            <Badge variant="default" className="text-xs bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0]">Module 3</Badge>
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Case: <span className="text-gold font-mono font-bold">{caseData?.case_number || "GH-2024-8912"}</span> • 
+          <p className="text-xs sm:text-sm text-[#71849A] mt-1">
+            Case: <span className="text-[#172F4D] font-mono font-bold">{caseData?.case_number || "GH-2024-8912"}</span> • 
             Structured entity extraction via Claude 3.5 Sonnet Vision & PaddleOCR.
           </p>
         </div>
@@ -250,45 +240,34 @@ export default function EvidenceExtractionPage() {
         <div className="flex items-center gap-3 flex-wrap">
           <Link href={`/dashboard/cases/${caseId}`}>
             <Button
-              variant="secondary"
+              variant="outline"
               size="md"
-              className="font-bold text-gold gap-1.5 border border-gold/40 hover:bg-gold/10"
+              className="font-bold text-[#172F4D] gap-1.5 border-[#DCE7F0] bg-white hover:bg-[#E1F1FB]"
             >
-              <Clock className="w-4 h-4 text-gold" />
+              <Clock className="w-4 h-4 text-[#172F4D]" />
               <span>Case Tracker (Module 7)</span>
             </Button>
           </Link>
 
           <Link href={`/dashboard/cases/${caseId}/verification`}>
             <Button
-              variant="primary"
+              variant="secondary"
               size="md"
-              className="font-bold text-white shadow-glow gap-1.5 border border-emerald-500/40 bg-emerald-950/40 hover:bg-emerald-900/50"
+              className="font-bold text-emerald-800 gap-1.5 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
             >
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Smart Verification (Module 4)</span>
             </Button>
           </Link>
 
           <Button
-            variant="ghost"
-            size="sm"
-            onClick={loadSample}
-            isLoading={isExtracting}
-            className="text-xs text-slate-300"
-          >
-            <Sparkles className="w-3.5 h-3.5 mr-1 text-gold" />
-            Load Sample Evidence Demo
-          </Button>
-
-          <Button
-            variant="gold"
+            variant="primary"
             size="md"
             onClick={handleRunPipeline}
             isLoading={isExtracting}
-            className="font-bold text-navy-950 shadow-gold-glow gap-1.5"
+            className="font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-card gap-1.5"
           >
-            <RefreshCw className="w-4 h-4 text-navy-950" />
+            <RefreshCw className="w-4 h-4 text-white" />
             <span>Re-Run Vision & OCR</span>
           </Button>
         </div>
@@ -302,13 +281,13 @@ export default function EvidenceExtractionPage() {
 
       {/* Evidence File Selector Strip */}
       {caseData?.evidence_items && caseData.evidence_items.length > 0 && (
-        <div className="p-3.5 rounded-xl bg-navy-900 border border-navy-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 rounded-xl bg-white border border-[#DCE7F0] shadow-card flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-300">Inspect Evidence File:</span>
+            <span className="font-semibold text-[#172F4D]">Inspect Evidence File:</span>
             <select
               value={selectedEvidenceId}
               onChange={(e) => handleSelectEvidence(e.target.value)}
-              className="bg-navy-950 border border-navy-700 rounded-lg px-3 py-1.5 text-xs text-gold font-semibold focus:outline-none focus:border-purple"
+              className="bg-[#F1F6FB] border border-[#DCE7F0] rounded-lg px-3 py-1.5 text-xs text-[#172F4D] font-semibold focus:outline-none focus:border-[#172F4D]"
             >
               {caseData.evidence_items.map((ev) => (
                 <option key={ev.id} value={ev.id}>
@@ -318,9 +297,9 @@ export default function EvidenceExtractionPage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
-            <span className="flex items-center gap-1 text-emerald-400">
-              <ShieldCheck className="w-4 h-4" /> Zero-PIN Filter: Passed
+          <div className="flex items-center gap-4 text-[#71849A] font-mono text-[11px]">
+            <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" /> Zero-PIN Filter: Passed
             </span>
             <span className="hidden sm:inline">Engine: Claude 3.5 Vision + PaddleOCR</span>
           </div>
@@ -332,11 +311,11 @@ export default function EvidenceExtractionPage() {
         {/* Left Column: Visual Screenshot & Raw OCR Transcript (5 Cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Visual Screenshot Display */}
-          <Card>
-            <CardHeader className="py-3 px-5 border-b border-navy-800 flex flex-row items-center justify-between">
+          <Card className="border-[#DCE7F0] shadow-card bg-white">
+            <CardHeader className="py-3 px-5 border-b border-[#DCE7F0] bg-[#F1F6FB] flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-purple" />
-                <span className="text-xs font-semibold text-white truncate max-w-[200px]">
+                <FileText className="w-4 h-4 text-[#172F4D]" />
+                <span className="text-xs font-semibold text-[#172F4D] truncate max-w-[200px]">
                   {extraction?.evidence_file_name || "Evidence Screenshot"}
                 </span>
               </div>
@@ -345,48 +324,48 @@ export default function EvidenceExtractionPage() {
               </Badge>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              <div className="h-64 rounded-xl bg-navy-950 border border-navy-800 flex flex-col items-center justify-center p-4 overflow-hidden relative group">
+              <div className="h-64 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] flex flex-col items-center justify-center p-4 overflow-hidden relative group">
                 {/* Stylized Digital Receipt Representation */}
-                <div className="w-full max-w-xs p-4 rounded-xl bg-navy-900/90 border border-purple/30 text-center space-y-2 shadow-2xl">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
+                <div className="w-full max-w-xs p-4 rounded-xl bg-white border border-[#DCE7F0] text-center space-y-2 shadow-card">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-300">
                     <Check className="w-5 h-5" />
                   </div>
-                  <p className="text-xs text-slate-400 font-medium">Transaction Successful</p>
-                  <p className="text-2xl font-extrabold text-white font-mono">
+                  <p className="text-xs text-[#71849A] font-semibold">Transaction Successful</p>
+                  <p className="text-2xl font-extrabold text-[#172F4D] font-mono">
                     {formatCurrency(extraction?.transaction_info.amount.value || 24500)}
                   </p>
-                  <p className="text-[11px] text-purple-light font-mono truncate">
+                  <p className="text-[11px] text-[#172F4D] font-mono truncate font-medium">
                     To: {extraction?.transaction_info.beneficiary_upi_id.value || "rewards.claim77@ybl"}
                   </p>
-                  <div className="pt-2 border-t border-navy-800 text-[10px] text-slate-400 font-mono">
+                  <div className="pt-2 border-t border-[#DCE7F0] text-[10px] text-[#71849A] font-mono">
                     UTR: {extraction?.transaction_info.transaction_id_utr.value || "412890563412"}
                   </div>
                 </div>
               </div>
 
-              <p className="text-[11px] text-slate-400 text-center">
+              <p className="text-[11px] text-[#71849A] text-center">
                 Visual Inspection: Authenticated encrypted file streamed from private vault.
               </p>
             </CardContent>
           </Card>
 
           {/* Raw OCR Text Transcript */}
-          <Card>
-            <CardHeader className="py-3 px-5 border-b border-navy-800">
+          <Card className="border-[#DCE7F0] shadow-card bg-white">
+            <CardHeader className="py-3 px-5 border-b border-[#DCE7F0] bg-[#F1F6FB]">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-200">
+                <span className="text-xs font-semibold text-[#172F4D]">
                   Raw OCR Line Transcript
                 </span>
-                <span className="text-[10px] font-mono text-slate-500">
+                <span className="text-[10px] font-mono text-[#71849A]">
                   Engine: {extraction?.ocr_engine_used || "PaddleOCR"}
                 </span>
               </div>
             </CardHeader>
             <CardContent className="p-4 space-y-2">
-              <pre className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 text-slate-300 font-mono text-xs whitespace-pre-wrap max-h-56 overflow-y-auto leading-relaxed">
+              <pre className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-[#172F4D] font-mono text-xs whitespace-pre-wrap max-h-56 overflow-y-auto leading-relaxed">
                 {extraction?.raw_ocr_text || "Running OCR extraction..."}
               </pre>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-[#71849A]">
                 Full unedited character sequence preserved for formal verification and police logs.
               </p>
             </CardContent>
@@ -396,20 +375,20 @@ export default function EvidenceExtractionPage() {
         {/* Right Column: Structured Extracted Entities & Verification (7 Cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Section 1: Transaction Information */}
-          <Card className="border-purple/30">
-            <CardHeader className="py-4 px-6 border-b border-navy-800 flex flex-row items-center justify-between">
+          <Card className="border-[#DCE7F0] shadow-card bg-white">
+            <CardHeader className="py-4 px-6 border-b border-[#DCE7F0] bg-[#F1F6FB] flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-base text-white flex items-center gap-2">
-                  <Hash className="w-4 h-4 text-purple" />
+                <CardTitle className="text-base text-[#172F4D] flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-[#172F4D]" />
                   Extracted Transaction Details
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs text-[#71849A]">
                   Validated against Pydantic schema with certainty scores per field.
                 </CardDescription>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-400">Overall:</span>
+                <span className="text-xs text-[#71849A] font-semibold">Overall:</span>
                 <Badge variant="success">
                   {Math.round((extraction?.overall_confidence || 0.95) * 100)}% Confidence
                 </Badge>
@@ -419,99 +398,99 @@ export default function EvidenceExtractionPage() {
             <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* 12-Digit UTR */}
-                <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 space-y-1">
+                <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-medium">12-Digit Bank UTR</span>
+                    <span className="text-xs text-[#71849A] font-semibold">12-Digit Bank UTR</span>
                     {getConfidenceBadge(
                       extraction?.transaction_info.transaction_id_utr.confidence_level || "HIGH",
                       extraction?.transaction_info.transaction_id_utr.confidence || 0.98
                     )}
                   </div>
-                  <p className="font-mono font-extrabold text-gold text-lg">
+                  <p className="font-mono font-extrabold text-[#172F4D] text-lg">
                     {extraction?.transaction_info.transaction_id_utr.value || "Not Found"}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-mono">
+                  <p className="text-[10px] text-[#71849A] font-mono">
                     Source: {extraction?.transaction_info.transaction_id_utr.source}
                   </p>
                 </div>
 
                 {/* Amount */}
-                <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 space-y-1">
+                <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-medium">Transaction Amount</span>
+                    <span className="text-xs text-[#71849A] font-semibold">Transaction Amount</span>
                     {getConfidenceBadge(
                       extraction?.transaction_info.amount.confidence_level || "HIGH",
                       extraction?.transaction_info.amount.confidence || 0.98
                     )}
                   </div>
-                  <p className="font-mono font-extrabold text-crimson-light text-lg">
+                  <p className="font-mono font-extrabold text-red-600 text-lg">
                     {extraction?.transaction_info.amount.value 
                       ? formatCurrency(extraction.transaction_info.amount.value) 
                       : "Not Found"}
                   </p>
-                  <p className="text-[10px] text-slate-500 font-mono">
+                  <p className="text-[10px] text-[#71849A] font-mono">
                     Source: {extraction?.transaction_info.amount.source}
                   </p>
                 </div>
 
                 {/* Beneficiary VPA */}
-                <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 space-y-1">
+                <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-medium">Beneficiary (Fraudster VPA)</span>
+                    <span className="text-xs text-[#71849A] font-semibold">Beneficiary (Fraudster VPA)</span>
                     {getConfidenceBadge(
                       extraction?.transaction_info.beneficiary_upi_id.confidence_level || "HIGH",
                       extraction?.transaction_info.beneficiary_upi_id.confidence || 0.97
                     )}
                   </div>
-                  <p className="font-mono font-bold text-slate-100 text-sm truncate">
+                  <p className="font-mono font-bold text-[#172F4D] text-sm truncate">
                     {extraction?.transaction_info.beneficiary_upi_id.value || "Not Found"}
                   </p>
-                  <p className="text-[10px] text-purple-light font-medium">
+                  <p className="text-[10px] text-[#71849A] font-medium">
                     Bank: {extraction?.transaction_info.beneficiary_bank.value || "YES BANK"}
                   </p>
                 </div>
 
                 {/* Sender VPA / Account */}
-                <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 space-y-1">
+                <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-medium">Sender Account (Victim)</span>
+                    <span className="text-xs text-[#71849A] font-semibold">Sender Account (Victim)</span>
                     {getConfidenceBadge(
                       extraction?.transaction_info.sender_upi_id.confidence_level || "HIGH",
                       extraction?.transaction_info.sender_upi_id.confidence || 0.91
                     )}
                   </div>
-                  <p className="font-mono font-bold text-slate-100 text-sm truncate">
+                  <p className="font-mono font-bold text-[#172F4D] text-sm truncate">
                     {extraction?.transaction_info.sender_upi_id.value || "victim.user@okaxis"}
                   </p>
-                  <p className="text-[10px] text-slate-400">
+                  <p className="text-[10px] text-[#71849A]">
                     Bank: {extraction?.transaction_info.sender_bank.value || "Axis Bank"}
                   </p>
                 </div>
 
                 {/* Date & Time */}
-                <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 space-y-1">
+                <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-medium">Debit Date & Time</span>
+                    <span className="text-xs text-[#71849A] font-semibold">Debit Date & Time</span>
                     {getConfidenceBadge(
                       extraction?.transaction_info.transaction_date.confidence_level || "HIGH",
                       extraction?.transaction_info.transaction_date.confidence || 0.95
                     )}
                   </div>
-                  <p className="font-mono text-slate-200 text-xs">
+                  <p className="font-mono text-[#172F4D] text-xs">
                     {extraction?.transaction_info.transaction_date.value} • {extraction?.transaction_info.transaction_time.value || "09:14 PM"}
                   </p>
                 </div>
 
                 {/* App Used */}
-                <div className="p-3.5 rounded-xl bg-navy-950 border border-navy-800 space-y-1">
+                <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-slate-400 font-medium">Payment App</span>
+                    <span className="text-xs text-[#71849A] font-semibold">Payment App</span>
                     {getConfidenceBadge(
                       extraction?.transaction_info.app_used.confidence_level || "HIGH",
                       extraction?.transaction_info.app_used.confidence || 0.99
                     )}
                   </div>
-                  <p className="font-semibold text-slate-100 text-xs">
+                  <p className="font-semibold text-[#172F4D] text-xs">
                     {extraction?.transaction_info.app_used.value || "PhonePe"}
                   </p>
                 </div>
@@ -521,20 +500,20 @@ export default function EvidenceExtractionPage() {
 
           {/* Section 2: Communication & Threat Intelligence */}
           {extraction?.communication_info && (
-            <Card>
-              <CardHeader className="py-3 px-6 border-b border-navy-800">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-purple" />
+            <Card className="border-[#DCE7F0] shadow-card bg-white">
+              <CardHeader className="py-3 px-6 border-b border-[#DCE7F0] bg-[#F1F6FB]">
+                <CardTitle className="text-sm text-[#172F4D] flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-[#172F4D]" />
                   Communication & Threat Intelligence Analysis
                 </CardTitle>
               </CardHeader>
 
               <CardContent className="p-5 space-y-3 text-xs">
                 {extraction.communication_info.is_sender_spoofed.value && (
-                  <div className="p-3 rounded-lg bg-crimson/15 border border-crimson/30 text-crimson-light flex items-start gap-2.5">
-                    <AlertTriangle className="w-4 h-4 text-crimson shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-900 flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold">Sender Spoofing Alert: </span>
+                      <span className="font-bold text-red-900">Sender Spoofing Alert: </span>
                       {extraction.communication_info.is_sender_spoofed.uncertainty_note ||
                         "Alphanumeric SMS header masquerades as utility or bank entity without verified authorization."}
                     </div>
@@ -544,10 +523,10 @@ export default function EvidenceExtractionPage() {
                 {extraction.communication_info.suspicious_payment_instructions &&
                   extraction.communication_info.suspicious_payment_instructions.length > 0 && (
                     <div className="space-y-1.5">
-                      <span className="font-semibold text-slate-300">
+                      <span className="font-semibold text-[#172F4D]">
                         Suspicious Instructions & Coercion Patterns Identified:
                       </span>
-                      <ul className="list-disc pl-4 space-y-1 text-slate-400">
+                      <ul className="list-disc pl-4 space-y-1 text-[#71849A]">
                         {extraction.communication_info.suspicious_payment_instructions.map((inst, i) => (
                           <li key={i}>{inst}</li>
                         ))}
@@ -560,32 +539,32 @@ export default function EvidenceExtractionPage() {
 
           {/* Section 3: Conflict Alerts Card (If multiple distinct amounts or names detected) */}
           {extraction?.conflicts_detected && extraction.conflicts_detected.length > 0 && (
-            <Card className="border-gold/40 bg-gold/5">
-              <CardHeader className="py-3 px-6 border-b border-gold/20">
-                <div className="flex items-center gap-2 text-gold">
-                  <AlertOctagon className="w-4 h-4" />
-                  <CardTitle className="text-sm text-amber-200">
+            <Card className="border-amber-200 bg-amber-50/50 shadow-card">
+              <CardHeader className="py-3 px-6 border-b border-amber-200 bg-amber-50">
+                <div className="flex items-center gap-2 text-amber-900">
+                  <AlertOctagon className="w-4 h-4 text-amber-700" />
+                  <CardTitle className="text-sm font-bold text-amber-900">
                     Discrepancy / Conflict Detected
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-5 space-y-3 text-xs">
                 {extraction.conflicts_detected.map((conf, i) => (
-                  <div key={i} className="p-3 rounded-lg bg-navy-950 border border-gold/30 space-y-2">
-                    <p className="font-semibold text-gold">
+                  <div key={i} className="p-3 rounded-lg bg-white border border-amber-200 space-y-2 shadow-sm">
+                    <p className="font-semibold text-amber-900">
                       Field: <span className="font-mono uppercase">{conf.field_name}</span>
                     </p>
-                    <p className="text-slate-300">{conf.explanation}</p>
-                    <div className="p-2 rounded bg-navy-900 border border-navy-800 text-[11px] text-slate-400 space-y-1">
-                      <span className="font-semibold text-slate-300">Observed Variations:</span>
+                    <p className="text-[#172F4D]">{conf.explanation}</p>
+                    <div className="p-2 rounded bg-[#F1F6FB] border border-[#DCE7F0] text-[11px] text-[#71849A] space-y-1">
+                      <span className="font-semibold text-[#172F4D]">Observed Variations:</span>
                       {conf.conflicting_values.map((v, vIdx) => (
                         <div key={vIdx} className="flex justify-between font-mono">
                           <span>{v.source}:</span>
-                          <span className="text-white font-bold">{String(v.value)}</span>
+                          <span className="text-[#172F4D] font-bold">{String(v.value)}</span>
                         </div>
                       ))}
                     </div>
-                    <p className="text-[11px] text-amber-300">
+                    <p className="text-[11px] text-amber-800 font-semibold">
                       Recommendation: {conf.recommended_action}
                     </p>
                   </div>
@@ -595,14 +574,14 @@ export default function EvidenceExtractionPage() {
           )}
 
           {/* Section 4: Human-in-the-Loop Complainant Verification & Correction */}
-          <Card className="border-emerald-500/30">
-            <CardHeader className="py-3 px-6 border-b border-navy-800 flex flex-row items-center justify-between">
+          <Card className="border-emerald-200 bg-white shadow-card">
+            <CardHeader className="py-3 px-6 border-b border-emerald-100 bg-emerald-50/50 flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-sm text-emerald-300 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <CardTitle className="text-sm text-emerald-950 font-bold flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
                   Complainant Verification Step
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs text-emerald-800">
                   Inspect and confirm extracted values against your bank statement before filing complaints.
                 </CardDescription>
               </div>
@@ -614,41 +593,41 @@ export default function EvidenceExtractionPage() {
 
             <CardContent className="p-5 space-y-4 text-xs">
               {isEditing ? (
-                <div className="space-y-3 p-4 rounded-xl bg-navy-950 border border-navy-800">
-                  <span className="font-semibold text-white">Manual Field Overrides:</span>
+                <div className="space-y-3 p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                  <span className="font-semibold text-[#172F4D]">Manual Field Overrides:</span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-[11px] text-slate-400 block mb-1">12-Digit Bank UTR:</label>
+                      <label className="text-[11px] text-[#71849A] block mb-1 font-semibold">12-Digit Bank UTR:</label>
                       <input
                         type="text"
                         maxLength={12}
                         value={editUtr}
                         onChange={(e) => setEditUtr(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded bg-navy-900 border border-navy-700 text-gold font-mono text-xs focus:outline-none focus:border-purple"
+                        className="w-full px-2.5 py-1.5 rounded bg-white border border-[#DCE7F0] text-[#172F4D] font-mono text-xs focus:outline-none focus:border-[#172F4D]"
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] text-slate-400 block mb-1">Amount Debited (INR):</label>
+                      <label className="text-[11px] text-[#71849A] block mb-1 font-semibold">Amount Debited (INR):</label>
                       <input
                         type="number"
                         value={editAmount}
                         onChange={(e) => setEditAmount(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded bg-navy-900 border border-navy-700 text-crimson-light font-mono text-xs focus:outline-none focus:border-purple"
+                        className="w-full px-2.5 py-1.5 rounded bg-white border border-[#DCE7F0] text-red-600 font-mono text-xs focus:outline-none focus:border-[#172F4D]"
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <label className="text-[11px] text-slate-400 block mb-1">Beneficiary Fraudster VPA:</label>
+                      <label className="text-[11px] text-[#71849A] block mb-1 font-semibold">Beneficiary Fraudster VPA:</label>
                       <input
                         type="text"
                         value={editBeneficiaryUpi}
                         onChange={(e) => setEditBeneficiaryUpi(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded bg-navy-900 border border-navy-700 text-white font-mono text-xs focus:outline-none focus:border-purple"
+                        className="w-full px-2.5 py-1.5 rounded bg-white border border-[#DCE7F0] text-[#172F4D] font-mono text-xs focus:outline-none focus:border-[#172F4D]"
                       />
                     </div>
                   </div>
                 </div>
               ) : (
-                <p className="text-slate-300 leading-relaxed">
+                <p className="text-[#172F4D] leading-relaxed">
                   I confirm that the 12-digit UTR, debited amount, and beneficiary UPI ID extracted above reflect the unauthorized transaction on my bank account.
                 </p>
               )}
@@ -658,21 +637,25 @@ export default function EvidenceExtractionPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsEditing(!isEditing)}
-                  className="text-xs text-slate-400 hover:text-white"
+                  className="text-xs text-[#71849A] hover:text-[#172F4D]"
                 >
                   <Edit3 className="w-3.5 h-3.5 mr-1" />
                   {isEditing ? "Cancel Manual Edit" : "Edit Values Inline"}
                 </Button>
 
                 <Button
-                  variant={extraction?.user_verified ? "secondary" : "gold"}
+                  variant={extraction?.user_verified ? "secondary" : "primary"}
                   size="sm"
                   onClick={handleConfirmVerification}
                   isLoading={isSavingCorrection}
                   disabled={extraction?.user_verified && !isEditing}
-                  className="font-bold text-navy-950 gap-1.5"
+                  className={`font-bold gap-1.5 ${
+                    extraction?.user_verified 
+                      ? "bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0]" 
+                      : "bg-[#172F4D] text-white hover:bg-[#1D3B60] shadow-card"
+                  }`}
                 >
-                  <CheckCircle2 className="w-4 h-4 text-navy-950" />
+                  <CheckCircle2 className="w-4 h-4" />
                   <span>
                     {extraction?.user_verified ? "Re-Verify Parameters" : "Confirm & Verify Parameters"}
                   </span>

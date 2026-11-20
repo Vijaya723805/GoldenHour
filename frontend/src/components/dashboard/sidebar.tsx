@@ -12,9 +12,7 @@ import {
   User, 
   LogOut, 
   PhoneCall,
-  Clock,
-  ExternalLink,
-  LifeBuoy
+  Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
@@ -76,7 +74,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const handleLogout = async () => {
     await logout();
-    router.push("/login");
+    router.replace("/login");
   };
 
   return (
@@ -85,28 +83,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-navy-950/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-[#172F4D]/30 backdrop-blur-sm lg:hidden"
         />
       )}
 
       {/* Sidebar Container */}
       <aside
         className={cn(
-          "fixed top-0 bottom-0 left-0 z-50 w-72 bg-navy-900 border-r border-navy-800 flex flex-col transition-transform duration-300 lg:translate-x-0 shadow-fintech",
+          "fixed top-0 bottom-0 left-0 z-50 w-72 bg-white border-r border-[#DCE7F0] flex flex-col transition-transform duration-200 lg:translate-x-0 shadow-card",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Brand Header */}
-        <div className="h-16 px-6 border-b border-navy-800 flex items-center justify-between">
+        <div className="h-16 px-6 border-b border-[#DCE7F0] flex items-center justify-between bg-white">
           <Link href="/dashboard" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple to-gold flex items-center justify-center shadow-glow group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-[#172F4D] flex items-center justify-center shadow-sm group-hover:bg-[#1D3B60] transition-colors">
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="text-lg font-bold text-white tracking-tight">
-                Golden<span className="text-gold">Hour</span>
+              <span className="text-lg font-bold text-[#172F4D] tracking-tight">
+                Golden<span className="text-[#477DA8]">Hour</span>
               </span>
-              <span className="block text-[10px] text-slate-300 font-mono">
+              <span className="block text-[10px] text-[#71849A] font-mono">
                 Cyber Fraud Defense
               </span>
             </div>
@@ -114,20 +112,20 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Emergency Alert Hotlink */}
-        <div className="p-4 mx-4 mt-4 rounded-xl bg-navy-850 border border-crimson/40">
-          <div className="flex items-center justify-between text-xs font-bold text-crimson-light mb-1">
+        <div className="p-4 mx-4 mt-4 rounded-xl bg-[#E1F1FB] border border-[#DCE7F0]">
+          <div className="flex items-center justify-between text-xs font-bold text-[#172F4D] mb-1">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-crimson animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
               National Helpline
             </span>
-            <span className="font-mono text-white text-sm">1930</span>
+            <span className="font-mono text-red-600 font-bold text-sm">1930</span>
           </div>
-          <p className="text-[11px] text-slate-300 leading-tight">
+          <p className="text-[11px] text-[#71849A] leading-tight">
             Dial immediately to request an inter-bank lien on the fraudster's account.
           </p>
           <a
             href="tel:1930"
-            className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-crimson hover:bg-crimson-dark text-white text-xs font-bold transition-all shadow-crimson-glow min-h-[38px]"
+            className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-bold transition-all shadow-sm min-h-[38px]"
           >
             <PhoneCall className="w-3.5 h-3.5" />
             Call 1930 Helpline
@@ -136,7 +134,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Navigation List */}
         <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
-          <p className="px-3 pb-2 text-[10px] uppercase font-mono font-bold tracking-wider text-slate-400">
+          <p className="px-3 pb-2 text-[10px] uppercase font-mono font-bold tracking-wider text-[#71849A]">
             Platform Menu
           </p>
           {navItems.map((item) => {
@@ -148,17 +146,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all group min-h-[44px]",
+                  "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all group min-h-[44px]",
                   isActive
-                    ? "bg-purple text-white shadow-glow font-bold border border-purple/50"
-                    : "text-slate-200 hover:text-white hover:bg-navy-850"
+                    ? "bg-[#172F4D] text-white shadow-sm font-bold"
+                    : "text-[#71849A] hover:text-[#172F4D] hover:bg-[#F1F6FB]"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     className={cn(
                       "w-4 h-4 transition-colors",
-                      isActive ? "text-white" : "text-slate-400 group-hover:text-purple-light"
+                      isActive ? "text-white" : "text-[#71849A] group-hover:text-[#172F4D]"
                     )}
                   />
                   <span>{item.label}</span>
@@ -174,17 +172,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* User Profile & Logout Footer */}
-        <div className="p-4 border-t border-navy-800 bg-navy-950/80">
+        <div className="p-4 border-t border-[#DCE7F0] bg-[#F1F6FB]">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-8 h-8 rounded-lg bg-purple/20 border border-purple/40 text-purple-light font-bold flex items-center justify-center text-xs shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-[#E1F1FB] border border-[#DCE7F0] text-[#172F4D] font-bold flex items-center justify-center text-xs shrink-0">
                 {user?.full_name ? user.full_name[0].toUpperCase() : "U"}
               </div>
               <div className="truncate">
-                <p className="text-xs font-bold text-white truncate">
+                <p className="text-xs font-bold text-[#172F4D] truncate">
                   {user?.full_name || "Citizen User"}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate font-mono">
+                <p className="text-[10px] text-[#71849A] truncate font-mono">
                   {user?.bank_name || "Primary Bank"}
                 </p>
               </div>
@@ -194,7 +192,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-navy-750 bg-navy-850 hover:bg-crimson/15 hover:border-crimson/40 hover:text-crimson-light text-slate-200 text-xs font-semibold transition-colors min-h-[40px]"
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-[#DCE7F0] bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-700 text-[#71849A] text-xs font-semibold transition-colors min-h-[40px] shadow-sm"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>{t("nav.logout", "Log Out")}</span>

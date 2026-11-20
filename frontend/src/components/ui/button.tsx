@@ -11,27 +11,27 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "primary", size = "md", isLoading, children, disabled, ...props }, ref) => {
     // Accessible touch target sizing (min 44px for md/lg, comfortable 36px for sm)
     const baseStyles =
-      "inline-flex items-center justify-center font-medium transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-navy-900 disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] select-none";
+      "inline-flex items-center justify-center font-semibold transition-all duration-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#F1F6FB] disabled:opacity-50 disabled:pointer-events-none active:scale-[0.98] select-none";
 
     const sizeStyles = {
       sm: "px-3.5 py-2 text-xs min-h-[36px]",
       md: "px-5 py-2.5 text-sm min-h-[44px]",
-      lg: "px-6 py-3.5 text-base font-semibold min-h-[48px]",
+      lg: "px-6 py-3.5 text-base font-bold min-h-[48px]",
     };
 
     const variantStyles = {
       primary:
-        "bg-purple text-white hover:bg-purple-hover focus:ring-purple shadow-glow hover:shadow-purple/40 border border-purple/40",
+        "bg-[#172F4D] text-white hover:bg-[#1D3B60] focus:ring-[#172F4D] shadow-sm border border-[#172F4D]",
       secondary:
-        "bg-navy-800 text-slate-100 hover:bg-navy-750 hover:text-white border border-navy-700 focus:ring-slate-300",
+        "bg-[#E1F1FB] text-[#172F4D] hover:bg-[#D4EBF9] border border-[#DCE7F0] focus:ring-[#477DA8]",
       danger:
-        "bg-crimson text-white hover:bg-crimson-dark focus:ring-crimson shadow-crimson-glow border border-crimson/40",
+        "bg-[#EF4444] text-white hover:bg-[#DC2626] focus:ring-[#EF4444] shadow-sm border border-[#EF4444]",
       gold:
-        "bg-gold text-navy-950 font-bold hover:bg-gold-light focus:ring-gold shadow-gold-glow border border-gold/50",
+        "bg-[#172F4D] text-white hover:bg-[#1D3B60] focus:ring-[#172F4D] shadow-sm border border-[#172F4D]",
       outline:
-        "border-2 border-purple text-purple-light hover:bg-purple/15 focus:ring-purple",
+        "border border-[#DCE7F0] text-[#172F4D] bg-white hover:bg-[#E1F1FB] hover:border-[#477DA8] focus:ring-[#172F4D]",
       ghost:
-        "text-slate-200 hover:text-white hover:bg-navy-800 focus:ring-slate-400",
+        "text-[#172F4D] hover:text-[#172F4D] hover:bg-[#E1F1FB]/60 focus:ring-[#C8D2DE]",
     };
 
     return (

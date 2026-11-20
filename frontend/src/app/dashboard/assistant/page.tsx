@@ -32,9 +32,10 @@ import {
   AssistantLanguage, 
   AssistantChatRequest, 
   AssistantChatResponse, 
-  QuickAction 
+  QuickAction,
+  FraudCaseSummary 
 } from "@/types";
-import { sendAssistantChat, fetchAssistantTopics } from "@/lib/api-client";
+import { sendAssistantChat, fetchAssistantTopics, fetchDashboardCases } from "@/lib/api-client";
 
 interface UIMessage {
   id: string;
@@ -53,8 +54,9 @@ export default function AssistantPage() {
   // Settings & Toggles
   const [language, setLanguage] = useState<AssistantLanguage>("en");
   const [seniorMode, setSeniorMode] = useState(false);
-  const [useCaseContext, setUseCaseContext] = useState(true);
-  const [activeCaseId, setActiveCaseId] = useState("case_101");
+  const [useCaseContext, setUseCaseContext] = useState(false);
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
+  const [userCases, setUserCases] = useState<FraudCaseSummary[]>([]);
 
   // Chat State
   const [messages, setMessages] = useState<UIMessage[]>([]);
@@ -70,9 +72,7 @@ export default function AssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Initialize Speech Recognition & Default Greetings
   useEffect(() => {
-    // Check Speech Recognition support in browser
     if (typeof window !== "undefined") {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
@@ -80,25 +80,29 @@ export default function AssistantPage() {
       }
     }
 
-    // Load topic prompt chips
     fetchAssistantTopics().then((res) => {
       if (res.success && res.data) {
         setTopics(res.data);
       }
     });
 
-    // Seed localized initial welcome message
-    setMessages([getWelcomeMessage(language, seniorMode)]);
-  }, []);
+    fetchDashboardCases(token).then((res) => {
+      if (res.success && res.data && res.data.length > 0) {
+        setUserCases(res.data);
+        setActiveCaseId(res.data[0].id);
+        setUseCaseContext(true);
+      }
+    });
 
-  // Update welcome message if user changes language with empty history
+    setMessages([getWelcomeMessage(language, seniorMode)]);
+  }, [token]);
+
   useEffect(() => {
     if (messages.length <= 1) {
       setMessages([getWelcomeMessage(language, seniorMode)]);
     }
   }, [language, seniorMode]);
 
-  // Auto-scroll chat to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
@@ -154,7 +158,6 @@ export default function AssistantPage() {
     }
   }
 
-  // Handle Voice Input (Speech-to-Text)
   const toggleListening = () => {
     if (!speechSupported) {
       alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
@@ -174,7 +177,6 @@ export default function AssistantPage() {
     recognition.continuous = false;
     recognition.interimResults = false;
 
-    // Set voice recognition language code
     if (language === "te") recognition.lang = "te-IN";
     else if (language === "hi") recognition.lang = "hi-IN";
     else recognition.lang = "en-IN";
@@ -187,7 +189,6 @@ export default function AssistantPage() {
       const transcript = event.results[0][0].transcript;
       if (transcript) {
         setInput(transcript);
-        // Automatically submit spoken inquiry
         sendMessage(transcript);
       }
     };
@@ -195,7 +196,6 @@ export default function AssistantPage() {
     recognition.start();
   };
 
-  // Handle Text-to-Speech (TTS Audio Playback)
   const toggleSpeak = (msgId: string, text: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       alert("Text-to-speech audio is not supported in this browser.");
@@ -211,12 +211,11 @@ export default function AssistantPage() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
 
-    // Pick appropriate voice tag
     if (language === "te") utterance.lang = "te-IN";
     else if (language === "hi") utterance.lang = "hi-IN";
     else utterance.lang = "en-IN";
 
-    utterance.rate = seniorMode ? 0.85 : 1.0; // Slower rate for senior citizens
+    utterance.rate = seniorMode ? 0.85 : 1.0;
 
     utterance.onend = () => setIsSpeaking(null);
     utterance.onerror = () => setIsSpeaking(null);
@@ -256,8 +255,8 @@ export default function AssistantPage() {
       const payload: AssistantChatRequest = {
         message: userText,
         language: language,
-        case_id: activeCaseId,
-        use_case_context: useCaseContext,
+        case_id: useCaseContext && activeCaseId ? activeCaseId : undefined,
+        use_case_context: useCaseContext && Boolean(activeCaseId),
         senior_citizen_mode: seniorMode,
         conversation_history: history,
       };
@@ -303,19 +302,19 @@ export default function AssistantPage() {
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-12 animate-fadeIn">
       {/* Top Header & Assistant Configuration Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-navy-800 pb-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#DCE7F0] pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-gold tracking-wider">MODULE 5 AI</span>
-            <span className="text-slate-600">•</span>
-            <Badge variant="default" className="text-[10px] bg-purple-900/60 text-purple-200 border-purple-500/30">
+            <span className="text-xs font-mono text-[#172F4D] font-bold tracking-wider">MODULE 5 AI</span>
+            <span className="text-[#DCE7F0]">•</span>
+            <Badge variant="default" className="text-[10px] bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0]">
               MHA 1930 & RBI Knowledge Base
             </Badge>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2 mt-0.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] tracking-tight flex items-center gap-2 mt-0.5">
             AI Cyber Defense Assistant
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-[#71849A] mt-0.5">
             Multilingual guidance on 1930 Golden Hour reporting, evidence preservation, and bank liens.
           </p>
         </div>
@@ -323,12 +322,12 @@ export default function AssistantPage() {
         {/* Toolbar: Language Switcher, Senior Citizen Mode, Case Context */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Language Selector */}
-          <div className="flex items-center bg-navy-950 p-1 rounded-xl border border-navy-800 text-xs">
-            <Globe className="w-3.5 h-3.5 text-gold ml-2 mr-1" />
+          <div className="flex items-center bg-white p-1 rounded-xl border border-[#DCE7F0] text-xs shadow-card">
+            <Globe className="w-3.5 h-3.5 text-[#172F4D] ml-2 mr-1" />
             <button
               onClick={() => setLanguage("en")}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
-                language === "en" ? "bg-purple text-white shadow-glow" : "text-slate-400 hover:text-slate-200"
+                language === "en" ? "bg-[#172F4D] text-white shadow-card" : "text-[#71849A] hover:text-[#172F4D]"
               }`}
             >
               English
@@ -336,7 +335,7 @@ export default function AssistantPage() {
             <button
               onClick={() => setLanguage("te")}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
-                language === "te" ? "bg-purple text-white shadow-glow" : "text-slate-400 hover:text-slate-200"
+                language === "te" ? "bg-[#172F4D] text-white shadow-card" : "text-[#71849A] hover:text-[#172F4D]"
               }`}
             >
               తెలుగు
@@ -344,7 +343,7 @@ export default function AssistantPage() {
             <button
               onClick={() => setLanguage("hi")}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
-                language === "hi" ? "bg-purple text-white shadow-glow" : "text-slate-400 hover:text-slate-200"
+                language === "hi" ? "bg-[#172F4D] text-white shadow-card" : "text-[#71849A] hover:text-[#172F4D]"
               }`}
             >
               हिंदी
@@ -354,45 +353,48 @@ export default function AssistantPage() {
           {/* Senior Citizen Mode Toggle */}
           <button
             onClick={() => setSeniorMode(!seniorMode)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all shadow-card ${
               seniorMode
-                ? "bg-amber-500/20 border-amber-500/50 text-amber-300 ring-1 ring-amber-500/40"
-                : "bg-navy-950 border-navy-800 text-slate-400 hover:text-slate-200"
+                ? "bg-[#E1F1FB] border-[#477DA8] text-[#172F4D] font-bold"
+                : "bg-white border-[#DCE7F0] text-[#71849A] hover:text-[#172F4D]"
             }`}
             title="Senior citizen simplified mode"
           >
-            <HeartHandshake className="w-3.5 h-3.5 text-amber-400" />
+            <HeartHandshake className="w-3.5 h-3.5 text-[#172F4D]" />
             <span>Senior Citizen Mode</span>
-            {seniorMode && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+            {seniorMode && <span className="w-1.5 h-1.5 rounded-full bg-[#172F4D]" />}
           </button>
         </div>
       </div>
 
       {/* Case Context & Security Guardrails Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-navy-950/80 border border-navy-800 text-xs">
-        <label className="flex items-center gap-2 cursor-pointer text-slate-300 select-none">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] text-xs shadow-card">
+        <label className="flex items-center gap-2 cursor-pointer text-[#172F4D] select-none">
           <input
             type="checkbox"
             checked={useCaseContext}
+            disabled={userCases.length === 0}
             onChange={(e) => setUseCaseContext(e.target.checked)}
-            className="rounded border-navy-700 bg-navy-900 text-purple focus:ring-purple"
+            className="rounded border-[#DCE7F0] bg-white text-[#172F4D] focus:ring-[#172F4D]"
           />
-          <span className="flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-gold" />
+          <span className="flex items-center gap-1.5 font-medium">
+            <UserCheck className="w-3.5 h-3.5 text-[#172F4D]" />
             <span>
-              Use verified case parameters in AI advice (Case GH-2024-8912: ₹24,500 / UTR 412890563412)
+              {userCases.length > 0
+                ? `Inject active case parameters (${userCases.find((c) => c.id === activeCaseId)?.case_number || userCases[0].case_number}: ${userCases.find((c) => c.id === activeCaseId)?.title || userCases[0].title})`
+                : "Inject active case parameters (No registered fraud cases yet)"}
             </span>
           </span>
         </label>
 
-        <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-mono">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-2 text-[11px] text-emerald-800 font-mono font-medium">
+          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>Zero-Credential Active (PIN/OTP Auto-Redacted)</span>
         </div>
       </div>
 
       {/* Main Chat Interface */}
-      <Card className={`border-navy-800 shadow-2xl flex flex-col justify-between transition-all ${
+      <Card className={`border-[#DCE7F0] shadow-card bg-white flex flex-col justify-between transition-all ${
         seniorMode ? "h-[620px]" : "h-[540px]"
       }`}>
         {/* Chat Messages Scrollable Area */}
@@ -404,8 +406,8 @@ export default function AssistantPage() {
             >
               <div className="flex items-end gap-2 max-w-[88%] sm:max-w-[80%]">
                 {m.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-full bg-purple/30 border border-purple/50 flex items-center justify-center text-purple-light shrink-0 mb-1">
-                    <Bot className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-full bg-[#E1F1FB] border border-[#DCE7F0] flex items-center justify-center text-[#172F4D] shrink-0 mb-1 shadow-card">
+                    <Bot className="w-4 h-4 text-[#172F4D]" />
                   </div>
                 )}
 
@@ -414,8 +416,8 @@ export default function AssistantPage() {
                     seniorMode ? "text-sm sm:text-base leading-relaxed" : "text-xs sm:text-sm"
                   } ${
                     m.role === "user"
-                      ? "bg-gradient-to-r from-purple to-purple-700 text-white rounded-br-none shadow-glow font-medium"
-                      : "bg-navy-950/90 border border-navy-800 text-slate-100 rounded-bl-none shadow-md"
+                      ? "bg-[#172F4D] text-white rounded-br-none shadow-card font-medium"
+                      : "bg-[#F1F6FB] border border-[#DCE7F0] text-[#172F4D] rounded-bl-none shadow-card"
                   }`}
                 >
                   {/* Message Text with preserved line-breaks */}
@@ -423,19 +425,19 @@ export default function AssistantPage() {
 
                   {/* Assistant Message Quick Action Chips */}
                   {m.quickActions && m.quickActions.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-navy-800 flex flex-wrap gap-2">
+                    <div className="mt-3 pt-3 border-t border-[#DCE7F0] flex flex-wrap gap-2">
                       {m.quickActions.map((qa, i) => (
                         <a
                           key={i}
                           href={qa.action_target}
                           target={qa.action_type === "NAVIGATE" && qa.action_target.startsWith("http") ? "_blank" : undefined}
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-purple-950/60 hover:bg-purple-900/80 text-purple-200 border border-purple-500/30 transition-all shadow-sm"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] transition-all shadow-card"
                         >
                           {qa.action_type === "CALL" ? (
-                            <Phone className="w-3 h-3 text-emerald-400" />
+                            <Phone className="w-3 h-3 text-red-600" />
                           ) : (
-                            <ExternalLink className="w-3 h-3 text-gold" />
+                            <ExternalLink className="w-3 h-3 text-[#172F4D]" />
                           )}
                           <span>{qa.label}</span>
                         </a>
@@ -444,20 +446,20 @@ export default function AssistantPage() {
                   )}
 
                   {/* Message Bottom Metadata & TTS Button */}
-                  <div className="mt-2 pt-1 flex items-center justify-between text-[10px] text-slate-400">
+                  <div className="mt-2 pt-1 flex items-center justify-between text-[10px] text-[#71849A]">
                     <span className="font-mono">{m.timestamp}</span>
 
                     {m.role === "assistant" && (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => toggleSpeak(m.id, m.content)}
-                          className={`p-1 rounded hover:bg-navy-800 transition-colors ${
-                            isSpeaking === m.id ? "text-gold" : "text-slate-400 hover:text-slate-200"
+                          className={`p-1 rounded hover:bg-white transition-colors ${
+                            isSpeaking === m.id ? "text-[#172F4D] font-bold" : "text-[#71849A] hover:text-[#172F4D]"
                           }`}
                           title="Read out loud (Text-to-Speech)"
                         >
                           {isSpeaking === m.id ? (
-                            <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                            <VolumeX className="w-3.5 h-3.5 text-[#172F4D] animate-pulse" />
                           ) : (
                             <Volume2 className="w-3.5 h-3.5" />
                           )}
@@ -470,12 +472,12 @@ export default function AssistantPage() {
 
               {/* Follow-up question suggestion chips */}
               {m.followUps && m.followUps.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2 ml-9">
+                <div className="flex flex-wrap gap-1.5 mt-2 ml-10">
                   {m.followUps.map((q, idx) => (
                     <button
                       key={idx}
                       onClick={() => sendMessage(q)}
-                      className="text-[11px] px-2.5 py-1 rounded-full bg-navy-900/80 hover:bg-purple-950 text-slate-300 hover:text-gold border border-navy-700 transition-all text-left"
+                      className="text-[11px] px-2.5 py-1 rounded-full bg-white hover:bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] transition-all text-left shadow-card"
                     >
                       💡 {q}
                     </button>
@@ -487,8 +489,8 @@ export default function AssistantPage() {
 
           {/* Typing Indicator */}
           {isLoading && (
-            <div className="flex items-center gap-2 text-xs text-purple-light ml-2">
-              <Bot className="w-4 h-4 animate-spin text-gold" />
+            <div className="flex items-center gap-2 text-xs text-[#172F4D] ml-2 font-medium">
+              <Bot className="w-4 h-4 animate-spin text-[#172F4D]" />
               <span>
                 {language === "te"
                   ? "గోల్డెన్‌అవర్ AI ఆలోచిస్తోంది..."
@@ -503,15 +505,15 @@ export default function AssistantPage() {
         </CardContent>
 
         {/* Quick Topic Chips Toolbar */}
-        <div className="px-4 py-2 bg-navy-950/90 border-t border-navy-800/80 overflow-x-auto flex items-center gap-2 text-xs scrollbar-none">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+        <div className="px-4 py-2 bg-[#F1F6FB] border-t border-[#DCE7F0] overflow-x-auto flex items-center gap-2 text-xs scrollbar-none">
+          <span className="text-[11px] font-semibold text-[#71849A] uppercase tracking-wider shrink-0 mr-1">
             {language === "te" ? "త్వరిత ప్రశ్నలు:" : language === "hi" ? "अक्सर पूछे जाने वाले सवाल:" : "Common Inquiries:"}
           </span>
           {currentTopics.map((item) => (
             <button
               key={item.id}
               onClick={() => sendMessage(item.label)}
-              className="px-2.5 py-1 rounded-lg bg-navy-900 hover:bg-purple-900/60 text-slate-300 hover:text-white border border-navy-800 text-[11px] font-medium whitespace-nowrap transition-colors"
+              className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] text-[11px] font-medium whitespace-nowrap transition-colors shadow-card"
             >
               {item.label}
             </button>
@@ -519,14 +521,14 @@ export default function AssistantPage() {
         </div>
 
         {/* Input Bar with Voice (Speech-to-Text) Button */}
-        <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-navy-800 flex gap-2 bg-navy-950/95">
+        <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-[#DCE7F0] flex gap-2 bg-white rounded-b-2xl">
           <button
             type="button"
             onClick={toggleListening}
             className={`p-2.5 rounded-xl border transition-all ${
               isListening
-                ? "bg-crimson text-white border-crimson animate-pulse"
-                : "bg-navy-900 border-navy-700 text-slate-300 hover:text-gold hover:border-gold/50"
+                ? "bg-[#EF4444] text-white border-[#EF4444] animate-pulse"
+                : "bg-[#F1F6FB] border-[#DCE7F0] text-[#71849A] hover:text-[#172F4D] hover:bg-[#E1F1FB]"
             }`}
             title={isListening ? "Listening... click to stop" : "Speak your question (Speech-to-Text)"}
           >
@@ -545,7 +547,7 @@ export default function AssistantPage() {
                 ? "1930 हेल्पलाइन, साइबर पोर्टल, सबूत या RBI नियमों के बारे में पूछें..."
                 : "Ask about 1930 helpline SOPs, cybercrime.gov.in, account freeze vs reporting..."
             }
-            className={`flex-1 px-4 py-2.5 rounded-xl bg-navy-900 border border-navy-700 text-white placeholder-slate-500 focus:outline-none focus:border-purple ${
+            className={`flex-1 px-4 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-[#172F4D] placeholder-[#71849A] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors ${
               seniorMode ? "text-sm sm:text-base" : "text-xs sm:text-sm"
             }`}
           />
@@ -555,7 +557,7 @@ export default function AssistantPage() {
             variant="primary"
             size="md"
             disabled={isLoading || !input.trim()}
-            className="gap-1.5 px-4 font-bold shadow-glow"
+            className="gap-1.5 px-4 font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-card"
           >
             <Send className="w-4 h-4" />
             <span className="hidden sm:inline">
@@ -566,14 +568,14 @@ export default function AssistantPage() {
       </Card>
 
       {/* Mandatory Safety & Legal Advisory Notice */}
-      <div className="p-3 rounded-xl bg-navy-950 border border-navy-800 text-[11px] text-slate-400 flex items-start gap-2.5">
-        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-        <p className="leading-relaxed">
-          <strong className="text-slate-300">Mandatory Safety Advisory: </strong>
+      <div className="p-3 rounded-xl bg-[#E1F1FB] border border-[#DCE7F0] text-[11px] text-[#71849A] flex items-start gap-2.5 shadow-card">
+        <AlertTriangle className="w-4 h-4 text-[#172F4D] shrink-0 mt-0.5" />
+        <p className="leading-relaxed text-[#172F4D]">
+          <strong className="text-[#172F4D]">Mandatory Safety Advisory: </strong>
           GoldenHour AI provides educational assistance based on official I4C and RBI procedures. It will never ask for your UPI PIN or OTP. 
           GoldenHour cannot directly freeze bank accounts or guarantee money recovery. Formal complaints must be registered by the citizen directly on 
-          <a href="https://cybercrime.gov.in" target="_blank" rel="noreferrer" className="text-gold underline ml-1">cybercrime.gov.in</a> or by dialing 
-          <a href="tel:1930" className="text-emerald-400 font-bold ml-1">1930</a>.
+          <a href="https://cybercrime.gov.in" target="_blank" rel="noreferrer" className="text-[#172F4D] underline ml-1 font-bold">cybercrime.gov.in</a> or by dialing 
+          <a href="tel:1930" className="text-red-600 font-bold ml-1">1930</a>.
         </p>
       </div>
     </div>

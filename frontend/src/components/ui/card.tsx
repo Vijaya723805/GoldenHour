@@ -9,7 +9,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-xl bg-navy-850 border border-navy-750 shadow-card transition-all duration-200",
+        "rounded-2xl bg-white border border-[#DCE7F0] shadow-card transition-all duration-200",
         className
       )}
       {...props}
@@ -26,7 +26,7 @@ export function CardHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("px-6 py-5 border-b border-navy-800", className)}
+      className={cn("px-6 py-5 border-b border-[#DCE7F0]", className)}
       {...props}
     >
       {children}
@@ -42,7 +42,7 @@ export function CardTitle({
   return (
     <h3
       className={cn(
-        "text-lg font-bold tracking-tight text-white flex items-center gap-2",
+        "text-lg font-bold tracking-tight text-[#172F4D] flex items-center gap-2",
         className
       )}
       {...props}
@@ -58,7 +58,7 @@ export function CardDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-sm text-slate-300 mt-1 leading-relaxed", className)} {...props}>
+    <p className={cn("text-sm text-[#71849A] mt-1 leading-relaxed", className)} {...props}>
       {children}
     </p>
   );
@@ -84,7 +84,7 @@ export function CardFooter({
   return (
     <div
       className={cn(
-        "px-6 py-4 border-t border-navy-800 bg-navy-950/60 rounded-b-xl flex items-center justify-between",
+        "px-6 py-4 border-t border-[#DCE7F0] bg-[#F1F6FB]/80 rounded-b-2xl flex items-center justify-between",
         className
       )}
       {...props}

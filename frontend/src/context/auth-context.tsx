@@ -19,7 +19,6 @@ interface AuthContextType {
     preferred_language?: Language;
   }) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  demoLogin: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -31,24 +30,10 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
-  demoLogin: async () => {},
   updateProfile: async () => ({ success: false }),
 });
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
-
-const DEMO_USER: UserProfile = {
-  id: "user_demo_772",
-  email: "victim.demo@goldenhour.in",
-  full_name: "Vikramaditya Sharma",
-  phone_number: "+919876543210",
-  bank_name: "Axis Bank",
-  preferred_language: "en",
-  created_at: new Date(Date.now() - 12 * 86400000).toISOString(),
-  updated_at: new Date().toISOString(),
-  email_notifications: true,
-  sms_notifications: true,
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -190,19 +175,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const demoLogin = async () => {
-    setIsLoading(true);
-    try {
-      const demoToken = "demo_session_token";
-      setUser(DEMO_USER);
-      setToken(demoToken);
-      localStorage.setItem("goldenhour_token", demoToken);
-      localStorage.setItem("goldenhour_user", JSON.stringify(DEMO_USER));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -220,12 +192,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token || "demo_session_token"}`,
-        },
+        headers,
         body: JSON.stringify(updates),
       });
 
@@ -253,7 +229,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
-        demoLogin,
         updateProfile,
       }}
     >

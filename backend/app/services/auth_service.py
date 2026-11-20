@@ -75,7 +75,7 @@ class AuthService:
             print(f"[AuthService] Could not load users: {e}")
 
     def register(self, req: UserRegisterRequest) -> UserProfile:
-        email = req.email.lower()
+        email = req.email.strip().lower()
         if email in self._mock_users:
             raise ValueError("An account with this email address already exists.")
 
@@ -121,7 +121,7 @@ class AuthService:
         return profile
 
     def login(self, req: UserLoginRequest) -> Dict[str, Any]:
-        email = req.email.lower()
+        email = req.email.strip().lower()
         user_record = self._mock_users.get(email)
         
         # Verify credentials
