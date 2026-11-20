@@ -1,9 +1,13 @@
 import uuid
 import hashlib
+import json
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from app.schemas.auth import UserProfile, UserRegisterRequest, UserLoginRequest, ProfileUpdateRequest, LanguagePreference
 from app.db.supabase_client import db_manager
+
+USER_STORE_FILE = Path(__file__).resolve().parent.parent.parent / "uploads" / "users_store.json"
 
 
 class AuthService:
@@ -12,6 +16,7 @@ class AuthService:
         self._mock_users: Dict[str, Dict[str, Any]] = {}
         self._mock_tokens: Dict[str, str] = {}
         self._seed_demo_user()
+        self._load_users_from_disk()
 
     def _hash_password(self, password: str) -> str:
         return hashlib.sha256(password.encode("utf-8")).hexdigest()
@@ -35,6 +40,39 @@ class AuthService:
             "profile": demo_user,
             "password_hash": self._hash_password("Demo@1234")
         }
+
+    def _save_users_to_disk(self):
+        try:
+            USER_STORE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            data = {}
+            for email, rec in self._mock_users.items():
+                prof = rec["profile"]
+                data[email] = {
+                    "profile": prof.dict() if hasattr(prof, "dict") else prof.model_dump(),
+                    "password_hash": rec["password_hash"]
+                }
+            with open(USER_STORE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, default=str, indent=2)
+        except Exception as e:
+            print(f"[AuthService] Could not persist users: {e}")
+
+    def _load_users_from_disk(self):
+        try:
+            if USER_STORE_FILE.exists():
+                with open(USER_STORE_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    for email, rec in data.items():
+                        prof_data = rec["profile"]
+                        if isinstance(prof_data.get("created_at"), str):
+                            prof_data["created_at"] = datetime.fromisoformat(prof_data["created_at"])
+                        if isinstance(prof_data.get("updated_at"), str):
+                            prof_data["updated_at"] = datetime.fromisoformat(prof_data["updated_at"])
+                        self._mock_users[email] = {
+                            "profile": UserProfile(**prof_data),
+                            "password_hash": rec["password_hash"]
+                        }
+        except Exception as e:
+            print(f"[AuthService] Could not load users: {e}")
 
     def register(self, req: UserRegisterRequest) -> UserProfile:
         email = req.email.lower()
@@ -60,6 +98,7 @@ class AuthService:
             "profile": profile,
             "password_hash": self._hash_password(req.password)
         }
+        self._save_users_to_disk()
 
         # Attempt Supabase cloud sync if configured
         if db_manager.is_connected and db_manager.client:
@@ -98,11 +137,10 @@ class AuthService:
         }
 
     def get_current_user(self, token: str) -> Optional[UserProfile]:
+        if not token:
+            return None
         email = self._mock_tokens.get(token)
         if not email:
-            # Check if token is the demo token
-            if token == "demo_session_token":
-                return self._mock_users["victim.demo@goldenhour.in"]["profile"]
             return None
         return self._mock_users.get(email, {}).get("profile")
 
@@ -123,6 +161,7 @@ class AuthService:
                 if updates.sms_notifications is not None:
                     prof.sms_notifications = updates.sms_notifications
                 prof.updated_at = datetime.now()
+                self._save_users_to_disk()
                 return prof
         raise ValueError("User not found.")
 

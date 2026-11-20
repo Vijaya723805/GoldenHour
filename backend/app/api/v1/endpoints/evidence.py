@@ -26,9 +26,11 @@ async def upload_evidence(file: UploadFile = File(...)):
 
     data = EvidenceUploadResponse(
         evidence_id=evidence_id,
+        case_id=upload_result.get("case_id", "intake"),
         filename=upload_result["original_filename"],
         file_size=upload_result["file_size"],
         content_type=upload_result["content_type"] or "application/octet-stream",
+        category=upload_result.get("category", "UPI_RECEIPT"),
         storage_location=upload_result["cloud_status"],
         upload_timestamp=str(upload_result.get("timestamp", ""))
     )

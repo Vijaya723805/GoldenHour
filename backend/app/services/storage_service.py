@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Dict, Any, Optional
 from fastapi import UploadFile
@@ -92,6 +93,13 @@ class StorageService:
             "storage_path": supabase_bucket_path or str(local_path),
             "storage_location": storage_location,
         }
+
+    async def save_upload(self, file: UploadFile) -> Dict[str, Any]:
+        """Saves a general evidence upload into intake storage."""
+        res = await self.save_case_evidence(file, case_id="intake", category="UPI_RECEIPT")
+        res["cloud_status"] = res["storage_location"]
+        res["timestamp"] = datetime.now().isoformat()
+        return res
 
     def delete_evidence_file(self, local_path: str, storage_path: Optional[str] = None) -> bool:
         """Removes the file from local storage and Supabase private bucket."""

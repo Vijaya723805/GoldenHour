@@ -16,7 +16,7 @@ router = APIRouter()
 def extract_token(auth_header: Any = None) -> str:
     if isinstance(auth_header, str):
         return auth_header.replace("Bearer ", "").strip()
-    return "demo_session_token"
+    return ""
 
 
 @router.post("/register", response_model=ApiResponse[UserProfile])

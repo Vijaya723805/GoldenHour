@@ -15,7 +15,7 @@ router = APIRouter()
 def extract_token(auth_header: Any = None) -> str:
     if isinstance(auth_header, str):
         return auth_header.replace("Bearer ", "").strip()
-    return "demo_session_token"
+    return ""
 
 
 @router.post("/cases/{case_id}/evidence/{evidence_id}/extract", response_model=ApiResponse[EvidenceExtractionResult])
