@@ -294,8 +294,8 @@ class ExtractionService:
         - Calculating confidence metrics per field.
         - Detecting conflicts between visual and OCR extractions.
         """
-        # If pre-seeded sample exists, return enriched extraction
-        if evidence_id in self._extractions:
+        # If cached extraction exists and no physical file is provided, return cached
+        if evidence_id in self._extractions and (not file_path or not os.path.exists(file_path)):
             return self._extractions[evidence_id]
 
         now = datetime.now()

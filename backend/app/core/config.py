@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 15
     ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "webp", "pdf"]
 
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
     # Security & Compliance Safeguards
     # GoldenHour never stores sensitive credentials
     FORBIDDEN_KEYWORDS: List[str] = [

@@ -36,10 +36,10 @@ def create_complaint_draft(request: FraudReportDraftRequest):
     }
 
     tx_info = request.transaction.model_dump() if request.transaction else {
-        "transaction_id_utr": "412890563412",
-        "amount": 24500.0,
-        "beneficiary_upi_id": "rewards.claim77@ybl",
-        "app_used": "PhonePe"
+        "transaction_id_utr": "PENDING_VERIFICATION",
+        "amount": 0.0,
+        "beneficiary_upi_id": "UNKNOWN",
+        "app_used": "UPI"
     }
 
     # Generate documents with Claude Service
