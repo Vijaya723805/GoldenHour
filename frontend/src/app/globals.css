@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #101629;
+  --foreground: #FFFFFF;
+  --purple-brand: #7455E8;
+  --gold-brand: #E5B85C;
+  --light-bg: #F5F6FA;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom premium scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0c101f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #253055;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7455E8;
+}
+
+/* Accessible focus ring for buttons, links and inputs */
+:focus-visible {
+  outline: 2px solid #7455E8;
+  outline-offset: 2px;
+}
+
+/* Subtle smooth page entry */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+/* Touch targets for senior accessibility */
+button, a, input, select, textarea {
+  touch-action: manipulation;
+}
