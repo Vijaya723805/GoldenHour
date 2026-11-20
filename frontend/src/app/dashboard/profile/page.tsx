@@ -77,10 +77,10 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6 max-w-4xl animate-fadeIn">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">
+        <h1 className="text-2xl font-bold text-[#172F4D] tracking-tight">
           {t("profile.title", "Victim Profile & Security")}
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
+        <p className="text-xs sm:text-sm text-[#71849A] mt-1">
           {t("profile.subtitle", "Manage your contact info, preferred language, and notification alerts")}
         </p>
       </div>
@@ -94,13 +94,13 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Edit Form */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
+          <Card className="bg-white border-[#DCE7F0] shadow-card">
             <CardHeader>
-              <CardTitle>
-                <User className="w-5 h-5 text-purple" />
+              <CardTitle className="text-[#172F4D]">
+                <User className="w-5 h-5 text-[#172F4D]" />
                 Personal Information & Bank Details
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-[#71849A]">
                 These details will be used to auto-populate official complaints for Cyber Crime Cell & Bank Nodal Officers.
               </CardDescription>
             </CardHeader>
@@ -108,49 +108,49 @@ export default function ProfilePage() {
             <CardContent>
               <form onSubmit={handleSave} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
                     {t("auth.full_name", "Full Legal Name")}
                   </label>
                   <div className="relative">
-                    <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#71849A]" />
                     <input
                       type="text"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-navy-950 border border-navy-700 text-sm text-white focus:outline-none focus:border-purple"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
                       {t("auth.email", "Email Address")}
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <Mail className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#71849A]" />
                       <input
                         type="email"
                         disabled
-                        value={user?.email || "victim.demo@goldenhour.in"}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-navy-950/60 border border-navy-800 text-sm text-slate-400 cursor-not-allowed"
+                        value={user?.email || ""}
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB]/60 border border-[#DCE7F0] text-sm text-[#71849A] cursor-not-allowed"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
                       {t("auth.phone", "Mobile Number")}
                     </label>
                     <div className="relative">
-                      <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <Phone className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#71849A]" />
                       <input
                         type="tel"
                         required
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-navy-950 border border-navy-700 text-sm text-white focus:outline-none focus:border-purple font-mono"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors font-mono"
                       />
                     </div>
                   </div>
@@ -158,15 +158,15 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
                       {t("auth.bank", "Primary Bank Name")}
                     </label>
                     <div className="relative">
-                      <Building className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <Building className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#71849A]" />
                       <select
                         value={bankName}
                         onChange={(e) => setBankName(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-navy-950 border border-navy-700 text-sm text-white focus:outline-none focus:border-purple"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
                       >
                         <option value="State Bank of India (SBI)">State Bank of India (SBI)</option>
                         <option value="HDFC Bank">HDFC Bank</option>
@@ -180,15 +180,15 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
                       {t("auth.language", "Preferred Language")}
                     </label>
                     <div className="relative">
-                      <Globe className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                      <Globe className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#71849A]" />
                       <select
                         value={preferredLang}
                         onChange={(e) => setPreferredLang(e.target.value as Language)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-navy-950 border border-navy-700 text-sm text-white focus:outline-none focus:border-purple"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
                       >
                         <option value="en">English</option>
                         <option value="te">తెలుగు (Telugu)</option>
@@ -199,25 +199,25 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Notifications */}
-                <div className="pt-3 border-t border-navy-800 space-y-3">
-                  <p className="text-xs font-semibold text-slate-300">
+                <div className="pt-3 border-t border-[#DCE7F0] space-y-3">
+                  <p className="text-xs font-semibold text-[#172F4D]">
                     Emergency Alert Notifications
                   </p>
-                  <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2.5 text-xs text-[#172F4D] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={smsAlerts}
                       onChange={(e) => setSmsAlerts(e.target.checked)}
-                      className="rounded bg-navy-950 border-navy-700 text-purple focus:ring-purple"
+                      className="rounded bg-white border-[#DCE7F0] text-[#172F4D] focus:ring-[#172F4D]"
                     />
                     <span>SMS alerts for recipient bank freeze confirmations</span>
                   </label>
-                  <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2.5 text-xs text-[#172F4D] cursor-pointer">
                     <input
                       type="checkbox"
                       checked={emailAlerts}
                       onChange={(e) => setEmailAlerts(e.target.checked)}
-                      className="rounded bg-navy-950 border-navy-700 text-purple focus:ring-purple"
+                      className="rounded bg-white border-[#DCE7F0] text-[#172F4D] focus:ring-[#172F4D]"
                     />
                     <span>Email copies of AI-generated complaint drafts</span>
                   </label>
@@ -226,12 +226,12 @@ export default function ProfilePage() {
                 <div className="pt-3">
                   <Button
                     type="submit"
-                    variant="gold"
+                    variant="primary"
                     size="md"
                     isLoading={isSaving}
-                    className="font-bold gap-2"
+                    className="font-bold gap-2 text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-card"
                   >
-                    <Save className="w-4 h-4 text-navy-950" />
+                    <Save className="w-4 h-4 text-white" />
                     <span>{t("profile.save", "Save Changes")}</span>
                   </Button>
                 </div>
@@ -242,20 +242,20 @@ export default function ProfilePage() {
 
         {/* Right Column: Security Auditing & Zero-PIN Policy */}
         <div className="space-y-6">
-          <Card className="border-emerald-500/40 bg-navy-900/60">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <ShieldCheck className="w-5 h-5" />
-                <CardTitle className="text-sm text-emerald-300">
+          <Card className="border-emerald-200 bg-emerald-50/50 shadow-card">
+            <CardHeader className="pb-3 border-b border-emerald-100">
+              <div className="flex items-center gap-2 text-emerald-800">
+                <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                <CardTitle className="text-sm text-emerald-950">
                   Zero-Credential Policy
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 text-xs text-slate-300 leading-relaxed">
+            <CardContent className="space-y-3 text-xs text-[#172F4D] leading-relaxed pt-4">
               <p>
                 GoldenHour is built with strict privacy sandboxing:
               </p>
-              <ul className="space-y-1.5 list-disc pl-4 text-slate-400">
+              <ul className="space-y-1.5 list-disc pl-4 text-[#71849A]">
                 <li>Never asks for UPI PIN or MPIN.</li>
                 <li>Never records OTPs or passwords.</li>
                 <li>Evidence screenshots are sanitized and stripped of private credentials before analysis.</li>
@@ -266,26 +266,26 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Account Metadata</CardTitle>
+          <Card className="bg-white border-[#DCE7F0] shadow-card">
+            <CardHeader className="pb-3 border-b border-[#DCE7F0]">
+              <CardTitle className="text-sm text-[#172F4D]">Account Metadata</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-navy-800">
-                <span className="text-slate-400">Account ID:</span>
-                <span className="font-mono text-slate-200">{user?.id.slice(0, 15)}...</span>
+            <CardContent className="space-y-2 text-xs pt-4">
+              <div className="flex justify-between py-1 border-b border-[#DCE7F0]">
+                <span className="text-[#71849A]">Account ID:</span>
+                <span className="font-mono text-[#172F4D]">{user?.id.slice(0, 15)}...</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-navy-800">
-                <span className="text-slate-400">Auth Provider:</span>
-                <span className="font-mono text-purple-light">Supabase Auth</span>
+              <div className="flex justify-between py-1 border-b border-[#DCE7F0]">
+                <span className="text-[#71849A]">Auth Provider:</span>
+                <span className="font-mono text-[#172F4D] font-medium">Supabase Auth</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-navy-800">
-                <span className="text-slate-400">Active Language:</span>
-                <span className="font-mono text-gold uppercase">{language}</span>
+              <div className="flex justify-between py-1 border-b border-[#DCE7F0]">
+                <span className="text-[#71849A]">Active Language:</span>
+                <span className="font-mono text-[#172F4D] uppercase font-bold">{language}</span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-slate-400">Status:</span>
-                <span className="font-mono text-emerald-400">Verified Citizen</span>
+                <span className="text-[#71849A]">Status:</span>
+                <span className="font-mono text-emerald-700 font-bold">Verified Citizen</span>
               </div>
             </CardContent>
           </Card>

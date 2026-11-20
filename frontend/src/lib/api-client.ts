@@ -30,8 +30,8 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
 
 export function getAuthHeaders(token?: string | null): Record<string, string> {
-  const t = token || (typeof window !== "undefined" ? localStorage.getItem("goldenhour_token") : null) || "demo_session_token";
-  return { Authorization: `Bearer ${t}` };
+  const t = token || (typeof window !== "undefined" ? localStorage.getItem("goldenhour_token") : null);
+  return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
 export async function fetchHealth(): Promise<ApiResponse<SystemHealth>> {
@@ -274,18 +274,6 @@ export async function verifyExtractionResult(
   }
 }
 
-export async function fetchSampleExtraction(): Promise<ApiResponse<EvidenceExtractionResult>> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/extraction/sample`, { cache: "no-store" });
-    return await res.json();
-  } catch (err: any) {
-    return {
-      success: false,
-      error: { message: err.message || "Failed to load sample extraction" },
-    };
-  }
-}
-
 export async function fetchEmergencyGuidance(): Promise<ApiResponse<EmergencyGuidance>> {
   try {
     const res = await fetch(`${API_BASE_URL}/emergency/instructions`, { cache: "no-store" });
@@ -294,18 +282,6 @@ export async function fetchEmergencyGuidance(): Promise<ApiResponse<EmergencyGui
     return {
       success: false,
       error: { message: err.message || "Failed to load emergency guidance" },
-    };
-  }
-}
-
-export async function fetchSampleEvidence(): Promise<ApiResponse<EvidenceAnalysis>> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/evidence/sample`, { cache: "no-store" });
-    return await res.json();
-  } catch (err: any) {
-    return {
-      success: false,
-      error: { message: err.message || "Failed to load sample evidence" },
     };
   }
 }
@@ -342,14 +318,35 @@ export async function analyzeEvidence(evidenceId: string): Promise<ApiResponse<E
   }
 }
 
-export async function fetchSampleReport(): Promise<ApiResponse<FraudReport>> {
+export async function createComplaintDraft(payload: {
+  victim_name?: string;
+  victim_phone?: string;
+  victim_email?: string;
+  victim_bank_name?: string;
+  category?: string;
+  incident_description?: string;
+  transaction?: any;
+}): Promise<ApiResponse<FraudReport>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/fraud-report/sample`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE_URL}/fraud-report/draft`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        victim_name: payload.victim_name || "Citizen Complainant",
+        victim_phone: payload.victim_phone || "Not provided",
+        victim_email: payload.victim_email || "Not provided",
+        victim_bank_name: payload.victim_bank_name || "Victim Bank",
+        category: payload.category || "UNAUTHORIZED_DEBIT",
+        incident_description: payload.incident_description || "Unauthorized UPI debit incident.",
+        transaction: payload.transaction,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (err: any) {
     return {
       success: false,
-      error: { message: err.message || "Failed to load sample report" },
+      error: { message: err.message || "Failed to generate complaint draft" },
     };
   }
 }

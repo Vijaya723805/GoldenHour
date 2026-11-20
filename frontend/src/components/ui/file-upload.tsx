@@ -56,8 +56,8 @@ export function FileUpload({ onFileSelect, isLoading }: FileUploadProps) {
         className={cn(
           "relative border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200",
           dragActive
-            ? "border-purple bg-purple/15 scale-[1.01]"
-            : "border-navy-700 bg-navy-950/70 hover:border-purple hover:bg-navy-900/80",
+            ? "border-[#172F4D] bg-[#E1F1FB] scale-[1.01]"
+            : "border-[#DCE7F0] bg-[#F1F6FB] hover:border-[#172F4D] hover:bg-[#E1F1FB]/50",
           isLoading && "opacity-50 pointer-events-none"
         )}
       >
@@ -70,36 +70,36 @@ export function FileUpload({ onFileSelect, isLoading }: FileUploadProps) {
         />
 
         <div className="flex flex-col items-center justify-center space-y-3.5">
-          <div className="p-4 bg-purple/20 text-purple-light rounded-2xl border border-purple/30 shadow-glow">
-            <UploadCloud className="w-8 h-8 text-purple-light" />
+          <div className="p-4 bg-[#E1F1FB] text-[#172F4D] rounded-2xl border border-[#DCE7F0] shadow-sm">
+            <UploadCloud className="w-8 h-8 text-[#172F4D]" />
           </div>
 
           <div>
-            <p className="text-base sm:text-lg font-bold text-white">
+            <p className="text-base sm:text-lg font-bold text-[#172F4D]">
               {selectedFileName ? (
-                <span className="text-gold flex items-center justify-center gap-2">
-                  <FileText className="w-5 h-5 text-gold" /> {selectedFileName}
+                <span className="text-[#172F4D] flex items-center justify-center gap-2">
+                  <FileText className="w-5 h-5 text-[#172F4D]" /> {selectedFileName}
                 </span>
               ) : (
                 "Click to upload or drag & drop evidence here"
               )}
             </p>
-            <p className="text-sm text-slate-300 mt-1 max-w-md mx-auto">
+            <p className="text-sm text-[#71849A] mt-1 max-w-md mx-auto">
               PhonePe, Google Pay, Paytm debit receipt, bank SMS screenshot, or WhatsApp chat log
             </p>
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-navy-900 border border-navy-750 text-xs text-slate-300">
-            <span className="text-gold font-bold">First time?</span> Just take a phone screenshot of the transaction and click here.
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-[#DCE7F0] text-xs text-[#172F4D] shadow-sm">
+            <span className="font-bold">First time?</span> Just take a phone screenshot of the transaction and click here.
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-300 gap-2 px-1">
-        <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-          <ShieldCheck className="w-4 h-4 shrink-0" /> Zero-Credential Guarantee: UPI PINs & OTPs are never asked or stored
+      <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-[#71849A] gap-2 px-1">
+        <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+          <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600" /> Zero-Credential Guarantee: UPI PINs & OTPs are never asked or stored
         </span>
-        <span className="font-mono text-slate-400 text-[11px]">Supported: PNG, JPG, WEBP, PDF (Max 15MB)</span>
+        <span className="font-mono text-[#8CA0B3] text-[11px]">Supported: PNG, JPG, WEBP, PDF (Max 15MB)</span>
       </div>
     </div>
   );

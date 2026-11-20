@@ -127,7 +127,6 @@ export default function CaseTrackingPage() {
           "success",
           !currentState ? "Checklist item marked as completed." : "Checklist item marked as incomplete."
         );
-        // Refresh dashboard data for percentages
         const dashRes = await fetchEmergencyDashboard(caseId, token);
         if (dashRes.success && dashRes.data) setDashboardData(dashRes.data);
       } else {
@@ -252,18 +251,18 @@ export default function CaseTrackingPage() {
   if (isLoading && !tracking) {
     return (
       <div className="p-16 text-center space-y-4">
-        <div className="w-10 h-10 mx-auto rounded-full border-2 border-gold border-t-transparent animate-spin" />
-        <p className="text-sm font-mono text-slate-400">Loading emergency case tracker and timeline...</p>
+        <div className="w-10 h-10 mx-auto rounded-full border-2 border-[#172F4D] border-t-transparent animate-spin" />
+        <p className="text-sm font-mono text-[#71849A]">Loading emergency case tracker and timeline...</p>
       </div>
     );
   }
 
   if (!tracking) {
     return (
-      <div className="p-12 text-center space-y-4 max-w-lg mx-auto">
-        <AlertCircle className="w-12 h-12 text-crimson mx-auto" />
-        <h2 className="text-xl font-bold text-white">Case Not Found</h2>
-        <p className="text-xs text-slate-400">The requested case could not be located in your profile.</p>
+      <div className="p-12 text-center space-y-4 max-w-lg mx-auto bg-white rounded-2xl border border-[#DCE7F0] shadow-card">
+        <AlertCircle className="w-12 h-12 text-red-600 mx-auto" />
+        <h2 className="text-xl font-bold text-[#172F4D]">Case Not Found</h2>
+        <p className="text-xs text-[#71849A]">The requested case could not be located in your profile.</p>
         <Link href="/dashboard/cases">
           <Button variant="secondary" size="sm">Back to My Cases</Button>
         </Link>
@@ -271,7 +270,6 @@ export default function CaseTrackingPage() {
     );
   }
 
-  // Group checklist by stage
   const stage10m = tracking.checklist_items.filter((i) => i.stage === "WITHIN_10_MINUTES");
   const stage1h = tracking.checklist_items.filter((i) => i.stage === "WITHIN_1_HOUR");
   const stage24h = tracking.checklist_items.filter((i) => i.stage === "WITHIN_24_HOURS");
@@ -283,22 +281,22 @@ export default function CaseTrackingPage() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-fadeIn pb-12">
       {/* Top Breadcrumb & Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-navy-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DCE7F0] pb-4">
         <div className="flex items-center gap-3">
           <Link href="/dashboard/cases">
-            <Button variant="ghost" size="sm" className="p-2 text-slate-400 hover:text-white">
+            <Button variant="ghost" size="sm" className="p-2 text-[#71849A] hover:text-[#172F4D] hover:bg-[#E1F1FB]">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono font-extrabold text-gold text-lg">{tracking.case_number}</span>
+              <span className="font-mono font-extrabold text-[#172F4D] text-lg">{tracking.case_number}</span>
               {getStatusBadge(tracking.current_status)}
               {tracking.golden_hour_active && (
                 <Badge variant="crimson" className="text-[10px]">Golden Hour Active</Badge>
               )}
             </div>
-            <h1 className="text-lg sm:text-xl font-bold text-white mt-0.5">{tracking.title}</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-[#172F4D] mt-0.5">{tracking.title}</h1>
           </div>
         </div>
 
@@ -308,14 +306,14 @@ export default function CaseTrackingPage() {
             size="sm"
             onClick={loadCaseData}
             isLoading={isLoading}
-            className="text-xs text-slate-400 hover:text-white"
+            className="text-xs text-[#71849A] hover:text-[#172F4D] hover:bg-[#E1F1FB] border border-[#DCE7F0]"
           >
-            <RefreshCw className="w-3.5 h-3.5 mr-1" />
+            <RefreshCw className="w-3.5 h-3.5 mr-1 text-[#172F4D]" />
             Refresh
           </Button>
 
           <a href="tel:1930">
-            <Button variant="danger" size="sm" className="font-bold gap-1.5 shadow-crimson-glow">
+            <Button variant="danger" size="sm" className="font-bold gap-1.5 shadow-card bg-[#EF4444] hover:bg-[#DC2626] text-white">
               <PhoneCall className="w-3.5 h-3.5" />
               Dial 1930
             </Button>
@@ -335,50 +333,50 @@ export default function CaseTrackingPage() {
 
       {/* Case Summary Overview Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 rounded-xl bg-navy-900 border border-navy-800">
-          <span className="text-[11px] text-slate-400 block">Amount Lost</span>
-          <p className="text-lg font-mono font-extrabold text-crimson-light mt-0.5">
+        <div className="p-4 rounded-xl bg-white border border-[#DCE7F0] shadow-card">
+          <span className="text-[11px] text-[#71849A] font-semibold block">Amount Lost</span>
+          <p className="text-lg font-mono font-extrabold text-red-600 mt-0.5">
             {formatCurrency(tracking.amount_lost)}
           </p>
         </div>
 
-        <div className="p-4 rounded-xl bg-navy-900 border border-navy-800">
-          <span className="text-[11px] text-slate-400 block">12-Digit UTR</span>
-          <p className="text-sm font-mono font-bold text-gold mt-0.5 truncate">
+        <div className="p-4 rounded-xl bg-white border border-[#DCE7F0] shadow-card">
+          <span className="text-[11px] text-[#71849A] font-semibold block">12-Digit UTR</span>
+          <p className="text-sm font-mono font-bold text-[#172F4D] mt-0.5 truncate">
             {tracking.transaction_id_utr || "Pending"}
           </p>
         </div>
 
-        <div className="p-4 rounded-xl bg-navy-900 border border-navy-800">
-          <span className="text-[11px] text-slate-400 block">Beneficiary VPA</span>
-          <p className="text-xs font-mono text-slate-200 mt-1 truncate">
+        <div className="p-4 rounded-xl bg-white border border-[#DCE7F0] shadow-card">
+          <span className="text-[11px] text-[#71849A] font-semibold block">Beneficiary VPA</span>
+          <p className="text-xs font-mono text-[#172F4D] font-medium mt-1 truncate">
             {tracking.beneficiary_upi_id || "Not logged"}
           </p>
         </div>
 
-        <div className="p-4 rounded-xl bg-navy-900 border border-navy-800">
-          <span className="text-[11px] text-slate-400 block">Case Created</span>
-          <p className="text-xs text-slate-300 mt-1 font-mono">
+        <div className="p-4 rounded-xl bg-white border border-[#DCE7F0] shadow-card">
+          <span className="text-[11px] text-[#71849A] font-semibold block">Case Created</span>
+          <p className="text-xs text-[#172F4D] mt-1 font-mono">
             {formatDateTime(tracking.created_at)}
           </p>
         </div>
       </div>
 
       {/* Important Next Actions Card (Feature 4: Emergency Dashboard) */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-purple/15 via-navy-900 to-crimson/15 border border-purple/30 space-y-3">
+      <div className="p-5 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] shadow-card space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertOctagon className="w-5 h-5 text-gold shrink-0" />
-            <h3 className="font-bold text-white text-sm">Priority Next Actions (Emergency Protocol)</h3>
+            <AlertOctagon className="w-5 h-5 text-[#172F4D] shrink-0" />
+            <h3 className="font-bold text-[#172F4D] text-sm">Priority Next Actions (Emergency Protocol)</h3>
           </div>
-          <span className="text-xs font-mono text-gold font-bold">
+          <span className="text-xs font-mono text-[#172F4D] font-bold">
             {completedCount} / {totalCount} Completed ({progressPct}%)
           </span>
         </div>
 
-        <div className="w-full bg-navy-950 rounded-full h-2 overflow-hidden border border-navy-800">
+        <div className="w-full bg-[#E5F0F8] rounded-full h-2 overflow-hidden border border-[#DCE7F0]">
           <div
-            className="bg-gradient-to-r from-purple to-gold h-full transition-all duration-500"
+            className="bg-[#172F4D] h-full transition-all duration-500 rounded-full"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -387,52 +385,52 @@ export default function CaseTrackingPage() {
           {tracking.important_next_actions.map((act, idx) => (
             <div
               key={idx}
-              className="flex items-start gap-2 text-xs text-slate-200 bg-navy-950/70 p-2.5 rounded-lg border border-navy-800"
+              className="flex items-start gap-2 text-xs text-[#172F4D] bg-white p-2.5 rounded-lg border border-[#DCE7F0] shadow-card"
             >
-              <CheckCircle2 className="w-4 h-4 text-gold shrink-0 mt-0.5" />
-              <span>{act}</span>
+              <CheckCircle2 className="w-4 h-4 text-[#172F4D] shrink-0 mt-0.5" />
+              <span className="font-medium">{act}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Module Integration Sub-Navigation Pill Bar */}
-      <div className="flex flex-wrap items-center gap-2 p-2 rounded-xl bg-navy-900 border border-navy-800 text-xs">
-        <span className="text-[11px] font-semibold text-slate-400 px-2">Integrated Modules:</span>
+      <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-xl bg-white border border-[#DCE7F0] shadow-card text-xs">
+        <span className="text-[11px] font-semibold text-[#71849A] px-2">Integrated Modules:</span>
         <Link href={`/dashboard/cases/${caseId}/complaints`}>
-          <span className="px-3 py-1 rounded-md bg-gold/15 text-gold hover:bg-gold/25 font-medium transition-colors flex items-center gap-1.5 cursor-pointer">
-            <FileText className="w-3.5 h-3.5" />
+          <span className="px-3 py-1.5 rounded-lg bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] hover:bg-[#D4EBF9] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
+            <FileText className="w-3.5 h-3.5 text-[#172F4D]" />
             Generated Complaints (M6)
           </span>
         </Link>
         <Link href={`/dashboard/cases/${caseId}/verification`}>
-          <span className="px-3 py-1 rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 font-medium transition-colors flex items-center gap-1.5 cursor-pointer">
-            <ShieldCheck className="w-3.5 h-3.5" />
+          <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
             Smart Verification (M4)
           </span>
         </Link>
         <Link href={`/dashboard/cases/${caseId}/extraction`}>
-          <span className="px-3 py-1 rounded-md bg-purple/20 text-purple-light hover:bg-purple/30 font-medium transition-colors flex items-center gap-1.5 cursor-pointer">
-            <Bot className="w-3.5 h-3.5" />
+          <span className="px-3 py-1.5 rounded-lg bg-[#F1F6FB] text-[#172F4D] border border-[#DCE7F0] hover:bg-[#E1F1FB] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
+            <Bot className="w-3.5 h-3.5 text-[#172F4D]" />
             AI Extraction (M3)
           </span>
         </Link>
         <Link href="/dashboard/assistant">
-          <span className="px-3 py-1 rounded-md bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 font-medium transition-colors flex items-center gap-1.5 cursor-pointer">
-            <MessageSquare className="w-3.5 h-3.5" />
+          <span className="px-3 py-1.5 rounded-lg bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] hover:bg-[#D4EBF9] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
+            <MessageSquare className="w-3.5 h-3.5 text-[#172F4D]" />
             AI Assistant (M5)
           </span>
         </Link>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-navy-800 space-x-1 sm:space-x-3 overflow-x-auto pb-1 text-xs sm:text-sm">
+      <div className="flex border-b border-[#DCE7F0] space-x-1 sm:space-x-3 overflow-x-auto pb-1 text-xs sm:text-sm">
         <button
           onClick={() => setActiveTab("checklist")}
           className={`py-2 px-3 sm:px-4 font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "checklist"
-              ? "border-gold text-gold"
-              : "border-transparent text-slate-400 hover:text-white"
+              ? "border-[#172F4D] text-[#172F4D] font-bold"
+              : "border-transparent text-[#71849A] hover:text-[#172F4D]"
           }`}
         >
           Emergency Checklist ({completedCount}/{totalCount})
@@ -441,8 +439,8 @@ export default function CaseTrackingPage() {
           onClick={() => setActiveTab("timeline")}
           className={`py-2 px-3 sm:px-4 font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "timeline"
-              ? "border-gold text-gold"
-              : "border-transparent text-slate-400 hover:text-white"
+              ? "border-[#172F4D] text-[#172F4D] font-bold"
+              : "border-transparent text-[#71849A] hover:text-[#172F4D]"
           }`}
         >
           Action Timeline ({tracking.timeline.length})
@@ -451,8 +449,8 @@ export default function CaseTrackingPage() {
           onClick={() => setActiveTab("references")}
           className={`py-2 px-3 sm:px-4 font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "references"
-              ? "border-gold text-gold"
-              : "border-transparent text-slate-400 hover:text-white"
+              ? "border-[#172F4D] text-[#172F4D] font-bold"
+              : "border-transparent text-[#71849A] hover:text-[#172F4D]"
           }`}
         >
           Reference Numbers
@@ -461,8 +459,8 @@ export default function CaseTrackingPage() {
           onClick={() => setActiveTab("notes")}
           className={`py-2 px-3 sm:px-4 font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "notes"
-              ? "border-gold text-gold"
-              : "border-transparent text-slate-400 hover:text-white"
+              ? "border-[#172F4D] text-[#172F4D] font-bold"
+              : "border-transparent text-[#71849A] hover:text-[#172F4D]"
           }`}
         >
           Follow-up & Notes ({tracking.follow_up_notes.length})
@@ -471,8 +469,8 @@ export default function CaseTrackingPage() {
           onClick={() => setActiveTab("documents")}
           className={`py-2 px-3 sm:px-4 font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "documents"
-              ? "border-gold text-gold"
-              : "border-transparent text-slate-400 hover:text-white"
+              ? "border-[#172F4D] text-[#172F4D] font-bold"
+              : "border-transparent text-[#71849A] hover:text-[#172F4D]"
           }`}
         >
           Documents Ready ({tracking.ready_documents.length})
@@ -481,8 +479,8 @@ export default function CaseTrackingPage() {
           onClick={() => setActiveTab("links")}
           className={`py-2 px-3 sm:px-4 font-semibold border-b-2 transition-all whitespace-nowrap ${
             activeTab === "links"
-              ? "border-gold text-gold"
-              : "border-transparent text-slate-400 hover:text-white"
+              ? "border-[#172F4D] text-[#172F4D] font-bold"
+              : "border-transparent text-[#71849A] hover:text-[#172F4D]"
           }`}
         >
           Official Links
@@ -493,29 +491,29 @@ export default function CaseTrackingPage() {
       {activeTab === "checklist" && (
         <div className="space-y-6 animate-fadeIn">
           {/* Statutory Legal Disclaimer Banner */}
-          <div className="p-4 rounded-xl bg-navy-900 border border-gold/30 flex items-start gap-3">
-            <Info className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-            <div className="text-xs text-slate-300 leading-relaxed">
-              <p className="font-semibold text-gold">Recommended Target Notice</p>
-              <p className="mt-0.5">
+          <div className="p-4 rounded-xl bg-[#E1F1FB] border border-[#DCE7F0] flex items-start gap-3 shadow-card">
+            <Info className="w-5 h-5 text-[#172F4D] shrink-0 mt-0.5" />
+            <div className="text-xs text-[#172F4D] leading-relaxed">
+              <p className="font-bold text-[#172F4D]">Recommended Target Notice</p>
+              <p className="mt-0.5 text-[#71849A]">
                 The 10-Minute, 1-Hour, and 24-Hour action stages are recommended response targets designed to maximize inter-bank fund recovery chances, not guaranteed legal deadlines. GoldenHour does not claim complaints have been lodged until confirmed by the user. Only banks and authorized authorities can freeze accounts.
               </p>
             </div>
           </div>
 
           {/* STAGE 1: WITHIN 10 MINUTES */}
-          <Card className="border-crimson/30">
-            <CardHeader className="bg-crimson/10 border-b border-navy-800 pb-3">
+          <Card className="border-red-200 bg-white shadow-card overflow-hidden">
+            <CardHeader className="bg-red-50/80 border-b border-red-100 pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-crimson text-white font-mono font-bold flex items-center justify-center text-xs">
+                  <span className="w-6 h-6 rounded-full bg-red-600 text-white font-mono font-bold flex items-center justify-center text-xs shadow-sm">
                     1
                   </span>
                   <div>
-                    <CardTitle className="text-sm font-bold text-white">
+                    <CardTitle className="text-sm font-bold text-red-950">
                       Stage 1: WITHIN 10 MINUTES
                     </CardTitle>
-                    <CardDescription className="text-xs text-crimson-light">
+                    <CardDescription className="text-xs text-red-700">
                       Immediate Golden Hour Triage to freeze scammer accounts
                     </CardDescription>
                   </div>
@@ -523,7 +521,7 @@ export default function CaseTrackingPage() {
                 <Badge variant="crimson" className="text-[10px]">Critical Urgency</Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4 divide-y divide-navy-800">
+            <CardContent className="p-4 divide-y divide-[#DCE7F0]">
               {stage10m.map((item) => (
                 <div key={item.id} className="py-3.5 first:pt-0 last:pb-0 flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1">
@@ -531,16 +529,16 @@ export default function CaseTrackingPage() {
                       type="checkbox"
                       checked={item.is_completed}
                       onChange={() => handleToggleChecklist(item.id, item.is_completed)}
-                      className="w-4 h-4 mt-1 rounded bg-navy-950 border-navy-700 text-gold focus:ring-gold cursor-pointer"
+                      className="w-4 h-4 mt-1 rounded bg-[#F1F6FB] border-[#DCE7F0] text-[#172F4D] focus:ring-[#172F4D] cursor-pointer"
                     />
                     <div className="space-y-1">
-                      <p className={`text-xs font-semibold ${item.is_completed ? "line-through text-slate-400" : "text-white"}`}>
+                      <p className={`text-xs font-semibold ${item.is_completed ? "line-through text-[#71849A]" : "text-[#172F4D]"}`}>
                         {item.title}
                       </p>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">{item.description}</p>
+                      <p className="text-[11px] text-[#71849A] leading-relaxed">{item.description}</p>
                       {item.completed_at && (
-                        <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <p className="text-[10px] text-emerald-700 font-mono flex items-center gap-1 font-semibold">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           Completed on {formatDateTime(item.completed_at)}
                         </p>
                       )}
@@ -551,21 +549,21 @@ export default function CaseTrackingPage() {
                     <div className="shrink-0">
                       {item.action_url?.startsWith("tel:") ? (
                         <a href={item.action_url}>
-                          <Button variant="danger" size="sm" className="text-xs py-1 px-3 gap-1">
+                          <Button variant="danger" size="sm" className="text-xs py-1 px-3 gap-1 bg-red-600 hover:bg-red-700 text-white">
                             <PhoneCall className="w-3 h-3" />
                             {item.action_label}
                           </Button>
                         </a>
                       ) : item.action_url?.startsWith("http") ? (
                         <a href={item.action_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm" className="text-xs py-1 px-3 gap-1">
-                            <ExternalLink className="w-3 h-3" />
+                          <Button variant="outline" size="sm" className="text-xs py-1 px-3 gap-1 border-[#DCE7F0] text-[#172F4D] hover:bg-[#E1F1FB]">
+                            <ExternalLink className="w-3 h-3 text-[#172F4D]" />
                             {item.action_label}
                           </Button>
                         </a>
                       ) : (
                         <Link href={item.action_url || "#"}>
-                          <Button variant="secondary" size="sm" className="text-xs py-1 px-3">
+                          <Button variant="secondary" size="sm" className="text-xs py-1 px-3 bg-[#E1F1FB] text-[#172F4D] hover:bg-[#D4EBF9] border-[#DCE7F0]">
                             {item.action_label}
                           </Button>
                         </Link>
@@ -578,18 +576,18 @@ export default function CaseTrackingPage() {
           </Card>
 
           {/* STAGE 2: WITHIN 1 HOUR */}
-          <Card className="border-gold/30">
-            <CardHeader className="bg-gold/10 border-b border-navy-800 pb-3">
+          <Card className="border-[#DCE7F0] bg-white shadow-card overflow-hidden">
+            <CardHeader className="bg-[#E1F1FB] border-b border-[#DCE7F0] pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-gold text-navy-950 font-mono font-bold flex items-center justify-center text-xs">
+                  <span className="w-6 h-6 rounded-full bg-[#172F4D] text-white font-mono font-bold flex items-center justify-center text-xs">
                     2
                   </span>
                   <div>
-                    <CardTitle className="text-sm font-bold text-white">
+                    <CardTitle className="text-sm font-bold text-[#172F4D]">
                       Stage 2: WITHIN 1 HOUR
                     </CardTitle>
-                    <CardDescription className="text-xs text-amber-200">
+                    <CardDescription className="text-xs text-[#71849A] font-medium">
                       Formal complaint submission & evidence sharing
                     </CardDescription>
                   </div>
@@ -597,7 +595,7 @@ export default function CaseTrackingPage() {
                 <Badge variant="gold" className="text-[10px]">High Priority</Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4 divide-y divide-navy-800">
+            <CardContent className="p-4 divide-y divide-[#DCE7F0]">
               {stage1h.map((item) => (
                 <div key={item.id} className="py-3.5 first:pt-0 last:pb-0 flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1">
@@ -605,16 +603,16 @@ export default function CaseTrackingPage() {
                       type="checkbox"
                       checked={item.is_completed}
                       onChange={() => handleToggleChecklist(item.id, item.is_completed)}
-                      className="w-4 h-4 mt-1 rounded bg-navy-950 border-navy-700 text-gold focus:ring-gold cursor-pointer"
+                      className="w-4 h-4 mt-1 rounded bg-[#F1F6FB] border-[#DCE7F0] text-[#172F4D] focus:ring-[#172F4D] cursor-pointer"
                     />
                     <div className="space-y-1">
-                      <p className={`text-xs font-semibold ${item.is_completed ? "line-through text-slate-400" : "text-white"}`}>
+                      <p className={`text-xs font-semibold ${item.is_completed ? "line-through text-[#71849A]" : "text-[#172F4D]"}`}>
                         {item.title}
                       </p>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">{item.description}</p>
+                      <p className="text-[11px] text-[#71849A] leading-relaxed">{item.description}</p>
                       {item.completed_at && (
-                        <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <p className="text-[10px] text-emerald-700 font-mono flex items-center gap-1 font-semibold">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           Completed on {formatDateTime(item.completed_at)}
                         </p>
                       )}
@@ -625,23 +623,23 @@ export default function CaseTrackingPage() {
                     <div className="shrink-0">
                       {item.action_url === "#ref-numbers-card" ? (
                         <Button
-                          variant="gold"
+                          variant="secondary"
                           size="sm"
-                          className="text-xs py-1 px-3 text-navy-950"
+                          className="text-xs py-1 px-3 bg-[#E1F1FB] text-[#172F4D] hover:bg-[#D4EBF9] font-bold border-[#DCE7F0]"
                           onClick={() => setActiveTab("references")}
                         >
                           {item.action_label}
                         </Button>
                       ) : item.action_url?.startsWith("http") ? (
                         <a href={item.action_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm" className="text-xs py-1 px-3 gap-1">
-                            <ExternalLink className="w-3 h-3" />
+                          <Button variant="outline" size="sm" className="text-xs py-1 px-3 gap-1 border-[#DCE7F0] text-[#172F4D] hover:bg-[#E1F1FB]">
+                            <ExternalLink className="w-3 h-3 text-[#172F4D]" />
                             {item.action_label}
                           </Button>
                         </a>
                       ) : (
                         <Link href={item.action_url || "#"}>
-                          <Button variant="secondary" size="sm" className="text-xs py-1 px-3">
+                          <Button variant="secondary" size="sm" className="text-xs py-1 px-3 bg-[#E1F1FB] text-[#172F4D] hover:bg-[#D4EBF9] border-[#DCE7F0]">
                             {item.action_label}
                           </Button>
                         </Link>
@@ -654,26 +652,26 @@ export default function CaseTrackingPage() {
           </Card>
 
           {/* STAGE 3: WITHIN 24 HOURS */}
-          <Card className="border-purple/30">
-            <CardHeader className="bg-purple/10 border-b border-navy-800 pb-3">
+          <Card className="border-[#DCE7F0] bg-white shadow-card overflow-hidden">
+            <CardHeader className="bg-[#F1F6FB] border-b border-[#DCE7F0] pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-purple text-white font-mono font-bold flex items-center justify-center text-xs">
+                  <span className="w-6 h-6 rounded-full bg-[#172F4D] text-white font-mono font-bold flex items-center justify-center text-xs">
                     3
                   </span>
                   <div>
-                    <CardTitle className="text-sm font-bold text-white">
+                    <CardTitle className="text-sm font-bold text-[#172F4D]">
                       Stage 3: WITHIN 24 HOURS
                     </CardTitle>
-                    <CardDescription className="text-xs text-purple-light">
+                    <CardDescription className="text-xs text-[#71849A]">
                       Official bank escalation, status tracking & record preservation
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant="default" className="text-[10px]">Formal Escalation</Badge>
+                <Badge variant="default" className="text-[10px] bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0]">Formal Escalation</Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4 divide-y divide-navy-800">
+            <CardContent className="p-4 divide-y divide-[#DCE7F0]">
               {stage24h.map((item) => (
                 <div key={item.id} className="py-3.5 first:pt-0 last:pb-0 flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1">
@@ -681,16 +679,16 @@ export default function CaseTrackingPage() {
                       type="checkbox"
                       checked={item.is_completed}
                       onChange={() => handleToggleChecklist(item.id, item.is_completed)}
-                      className="w-4 h-4 mt-1 rounded bg-navy-950 border-navy-700 text-gold focus:ring-gold cursor-pointer"
+                      className="w-4 h-4 mt-1 rounded bg-[#F1F6FB] border-[#DCE7F0] text-[#172F4D] focus:ring-[#172F4D] cursor-pointer"
                     />
                     <div className="space-y-1">
-                      <p className={`text-xs font-semibold ${item.is_completed ? "line-through text-slate-400" : "text-white"}`}>
+                      <p className={`text-xs font-semibold ${item.is_completed ? "line-through text-[#71849A]" : "text-[#172F4D]"}`}>
                         {item.title}
                       </p>
-                      <p className="text-[11px] text-slate-400 leading-relaxed">{item.description}</p>
+                      <p className="text-[11px] text-[#71849A] leading-relaxed">{item.description}</p>
                       {item.completed_at && (
-                        <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <p className="text-[10px] text-emerald-700 font-mono flex items-center gap-1 font-semibold">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                           Completed on {formatDateTime(item.completed_at)}
                         </p>
                       )}
@@ -701,14 +699,14 @@ export default function CaseTrackingPage() {
                     <div className="shrink-0">
                       {item.action_url?.startsWith("http") ? (
                         <a href={item.action_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm" className="text-xs py-1 px-3 gap-1">
-                            <ExternalLink className="w-3 h-3" />
+                          <Button variant="outline" size="sm" className="text-xs py-1 px-3 gap-1 border-[#DCE7F0] text-[#172F4D] hover:bg-[#E1F1FB]">
+                            <ExternalLink className="w-3 h-3 text-[#172F4D]" />
                             {item.action_label}
                           </Button>
                         </a>
                       ) : (
                         <Link href={item.action_url || "#"}>
-                          <Button variant="secondary" size="sm" className="text-xs py-1 px-3">
+                          <Button variant="secondary" size="sm" className="text-xs py-1 px-3 bg-[#E1F1FB] text-[#172F4D] hover:bg-[#D4EBF9] border-[#DCE7F0]">
                             {item.action_label}
                           </Button>
                         </Link>
@@ -724,30 +722,30 @@ export default function CaseTrackingPage() {
 
       {/* TAB 2: TIMELINE OF ACTIONS */}
       {activeTab === "timeline" && (
-        <Card className="animate-fadeIn">
-          <CardHeader>
-            <CardTitle>Action Timeline & Case Audit Trail</CardTitle>
-            <CardDescription>
+        <Card className="animate-fadeIn border-[#DCE7F0] bg-white shadow-card">
+          <CardHeader className="border-b border-[#DCE7F0]">
+            <CardTitle className="text-[#172F4D]">Action Timeline & Case Audit Trail</CardTitle>
+            <CardDescription className="text-[#71849A]">
               Chronological log of user actions, evidence uploads, AI extractions, reference numbers, and status transitions.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-2.5 sm:before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-navy-800">
+          <CardContent className="space-y-6 pt-6">
+            <div className="relative pl-6 sm:pl-8 space-y-6 before:absolute before:left-2.5 sm:before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#DCE7F0]">
               {tracking.timeline.map((event) => (
                 <div key={event.id} className="relative group">
-                  <div className="absolute -left-6 sm:-left-8 top-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-gold border-2 border-navy-950 ring-4 ring-navy-900 group-hover:bg-purple transition-colors" />
-                  <div className="p-4 rounded-xl bg-navy-900 border border-navy-800 space-y-1.5 hover:border-navy-700 transition-colors">
+                  <div className="absolute -left-6 sm:-left-8 top-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-[#172F4D] border-2 border-white ring-4 ring-[#E1F1FB]" />
+                  <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-1.5 hover:border-[#172F4D] transition-colors shadow-card">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                      <h4 className="text-xs sm:text-sm font-bold text-[#172F4D] flex items-center gap-2">
                         {event.title}
                       </h4>
-                      <span className="text-[10px] font-mono text-slate-400">
+                      <span className="text-[10px] font-mono text-[#71849A]">
                         {formatDateTime(event.timestamp)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">{event.description}</p>
+                    <p className="text-xs text-[#172F4D] leading-relaxed">{event.description}</p>
                     {event.reference_id && (
-                      <span className="inline-block text-[10px] font-mono text-gold bg-gold/10 px-2 py-0.5 rounded">
+                      <span className="inline-block text-[10px] font-mono text-[#172F4D] bg-[#E1F1FB] px-2 py-0.5 rounded font-semibold border border-[#DCE7F0]">
                         Ref: {event.reference_id}
                       </span>
                     )}
@@ -761,14 +759,14 @@ export default function CaseTrackingPage() {
 
       {/* TAB 3: REFERENCE NUMBERS */}
       {activeTab === "references" && (
-        <Card className="animate-fadeIn" id="ref-numbers-card">
-          <CardHeader>
-            <CardTitle>Manual Reference Numbers Manager</CardTitle>
-            <CardDescription>
+        <Card className="animate-fadeIn border-[#DCE7F0] bg-white shadow-card" id="ref-numbers-card">
+          <CardHeader className="border-b border-[#DCE7F0]">
+            <CardTitle className="text-[#172F4D]">Manual Reference Numbers Manager</CardTitle>
+            <CardDescription className="text-[#71849A]">
               Record verified complaint numbers provided by the National Cyber Helpline (1930) or your issuing bank.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-6">
             <Alert variant="warning" title="Anti-Hallucination & Legal Submission Rule">
               GoldenHour does not automatically lodge complaints with authorities. Only enter reference numbers after you have personally contacted 1930 or submitted your dispute to the bank.
             </Alert>
@@ -776,11 +774,11 @@ export default function CaseTrackingPage() {
             <form onSubmit={handleSaveReferenceNumbers} className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* 1930 NCRP Token */}
-                <div className="space-y-2 p-4 rounded-xl bg-navy-950 border border-navy-800">
-                  <label className="text-xs font-semibold text-white block">
+                <div className="space-y-2 p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                  <label className="text-xs font-semibold text-[#172F4D] block">
                     1930 NCRP Acknowledgement Token
                   </label>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-[#71849A]">
                     Given by the 1930 helpline operator or portal confirmation SMS (e.g. 2024/NCRP/819203).
                   </p>
                   <input
@@ -788,25 +786,25 @@ export default function CaseTrackingPage() {
                     value={ncrpTokenInput}
                     onChange={(e) => setNcrpTokenInput(e.target.value)}
                     placeholder="e.g. 2024/NCRP/819203"
-                    className="w-full px-3 py-2 rounded-lg bg-navy-900 border border-navy-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-gold font-mono"
+                    className="w-full px-3 py-2 rounded-lg bg-white border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#71849A] focus:outline-none focus:border-[#172F4D] font-mono"
                   />
-                  <label className="flex items-center gap-2 pt-2 cursor-pointer text-xs text-slate-300">
+                  <label className="flex items-center gap-2 pt-2 cursor-pointer text-xs text-[#172F4D]">
                     <input
                       type="checkbox"
                       checked={confirmNcrp}
                       onChange={(e) => setConfirmNcrp(e.target.checked)}
-                      className="rounded bg-navy-900 border-navy-700 text-gold"
+                      className="rounded bg-white border-[#DCE7F0] text-[#172F4D]"
                     />
                     <span>I confirm I personally called 1930 or submitted this on cybercrime.gov.in</span>
                   </label>
                 </div>
 
                 {/* Bank Dispute SR Number */}
-                <div className="space-y-2 p-4 rounded-xl bg-navy-950 border border-navy-800">
-                  <label className="text-xs font-semibold text-white block">
+                <div className="space-y-2 p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                  <label className="text-xs font-semibold text-[#172F4D] block">
                     Bank Dispute Service Request (SR) Number
                   </label>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-[#71849A]">
                     Provided by your bank customer support when lodging unauthorized debit hold (e.g. SBI-SR-88192031).
                   </p>
                   <input
@@ -814,14 +812,14 @@ export default function CaseTrackingPage() {
                     value={bankSrInput}
                     onChange={(e) => setBankSrInput(e.target.value)}
                     placeholder="e.g. SBI-SR-88192031"
-                    className="w-full px-3 py-2 rounded-lg bg-navy-900 border border-navy-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-gold font-mono"
+                    className="w-full px-3 py-2 rounded-lg bg-white border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#71849A] focus:outline-none focus:border-[#172F4D] font-mono"
                   />
-                  <label className="flex items-center gap-2 pt-2 cursor-pointer text-xs text-slate-300">
+                  <label className="flex items-center gap-2 pt-2 cursor-pointer text-xs text-[#172F4D]">
                     <input
                       type="checkbox"
                       checked={confirmBank}
                       onChange={(e) => setConfirmBank(e.target.checked)}
-                      className="rounded bg-navy-900 border-navy-700 text-gold"
+                      className="rounded bg-white border-[#DCE7F0] text-[#172F4D]"
                     />
                     <span>I confirm I officially shared dispute documentation with my bank</span>
                   </label>
@@ -829,8 +827,8 @@ export default function CaseTrackingPage() {
               </div>
 
               {/* Police Station Ref (Optional) */}
-              <div className="p-4 rounded-xl bg-navy-950 border border-navy-800 space-y-2">
-                <label className="text-xs font-semibold text-white block">
+              <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-2">
+                <label className="text-xs font-semibold text-[#172F4D] block">
                   Local Police Station / GD / FIR Number (Optional)
                 </label>
                 <input
@@ -838,17 +836,17 @@ export default function CaseTrackingPage() {
                   value={policeRefInput}
                   onChange={(e) => setPoliceRefInput(e.target.value)}
                   placeholder="e.g. Cyber Crime PS GD Entry No. 44/2024"
-                  className="w-full px-3 py-2 rounded-lg bg-navy-900 border border-navy-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-gold font-mono"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#71849A] focus:outline-none focus:border-[#172F4D] font-mono"
                 />
               </div>
 
               <div className="flex justify-end">
                 <Button
                   type="submit"
-                  variant="gold"
+                  variant="primary"
                   size="md"
                   isLoading={isSavingRefs}
-                  className="font-bold text-navy-950 shadow-gold-glow"
+                  className="font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-card"
                 >
                   Save Reference Details
                 </Button>
@@ -862,22 +860,22 @@ export default function CaseTrackingPage() {
       {activeTab === "notes" && (
         <div className="space-y-6 animate-fadeIn">
           {/* Status Update Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Update Case Tracking Status</CardTitle>
-              <CardDescription>
+          <Card className="border-[#DCE7F0] bg-white shadow-card">
+            <CardHeader className="border-b border-[#DCE7F0]">
+              <CardTitle className="text-[#172F4D]">Update Case Tracking Status</CardTitle>
+              <CardDescription className="text-[#71849A]">
                 Progress your dispute through the authorized cybercrime response lifecycle.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <form onSubmit={handleUpdateStatus} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Tracking Status</label>
+                    <label className="text-xs font-semibold text-[#172F4D]">Tracking Status</label>
                     <select
                       value={selectedStatus}
                       onChange={(e) => setSelectedStatus(e.target.value as TrackingStatus)}
-                      className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-700 text-xs text-white focus:outline-none focus:border-purple"
+                      className="w-full px-3 py-2 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] focus:outline-none focus:border-[#172F4D]"
                     >
                       <option value="CASE_INITIALIZED">Case Initialized</option>
                       <option value="EVIDENCE_VERIFIED">Evidence Verified</option>
@@ -893,19 +891,19 @@ export default function CaseTrackingPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Status Transition Note (Optional)</label>
+                    <label className="text-xs font-semibold text-[#172F4D]">Status Transition Note (Optional)</label>
                     <input
                       type="text"
                       value={statusNoteInput}
                       onChange={(e) => setStatusNoteInput(e.target.value)}
                       placeholder="e.g. Bank nodal officer requested 3 days for lien response"
-                      className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-700 text-xs text-white focus:outline-none focus:border-purple"
+                      className="w-full px-3 py-2 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#71849A] focus:outline-none focus:border-[#172F4D]"
                     />
                   </div>
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit" variant="primary" size="sm" isLoading={isUpdatingStatus}>
+                  <Button type="submit" variant="primary" size="sm" isLoading={isUpdatingStatus} className="bg-[#172F4D] text-white hover:bg-[#1D3B60]">
                     Update Status
                   </Button>
                 </div>
@@ -914,22 +912,22 @@ export default function CaseTrackingPage() {
           </Card>
 
           {/* Add Follow-Up Note Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Add Follow-Up Note</CardTitle>
-              <CardDescription>
+          <Card className="border-[#DCE7F0] bg-white shadow-card">
+            <CardHeader className="border-b border-[#DCE7F0]">
+              <CardTitle className="text-[#172F4D]">Add Follow-Up Note</CardTitle>
+              <CardDescription className="text-[#71849A]">
                 Maintain detailed logs of phone conversations, bank meetings, and officer instructions.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <form onSubmit={handleAddNote} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div className="sm:col-span-1 space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Category</label>
+                    <label className="text-xs font-semibold text-[#172F4D]">Category</label>
                     <select
                       value={noteCategory}
                       onChange={(e) => setNoteCategory(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-700 text-xs text-white focus:outline-none focus:border-purple"
+                      className="w-full px-3 py-2 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] focus:outline-none focus:border-[#172F4D]"
                     >
                       <option value="Bank Support Call">Bank Support Call</option>
                       <option value="1930 Helpline Call">1930 Helpline Call</option>
@@ -940,13 +938,13 @@ export default function CaseTrackingPage() {
                   </div>
 
                   <div className="sm:col-span-3 space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-300">Note Content</label>
+                    <label className="text-xs font-semibold text-[#172F4D]">Note Content</label>
                     <textarea
                       value={newNoteText}
                       onChange={(e) => setNewNoteText(e.target.value)}
                       rows={2}
                       placeholder="Enter details of conversation, names of bank officials, or next scheduled follow-up..."
-                      className="w-full px-3 py-2 rounded-lg bg-navy-950 border border-navy-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple"
+                      className="w-full px-3 py-2 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#71849A] focus:outline-none focus:border-[#172F4D]"
                     />
                   </div>
                 </div>
@@ -954,11 +952,11 @@ export default function CaseTrackingPage() {
                 <div className="flex justify-end">
                   <Button
                     type="submit"
-                    variant="gold"
+                    variant="primary"
                     size="sm"
                     isLoading={isAddingNote}
                     disabled={!newNoteText.trim()}
-                    className="text-navy-950 font-bold"
+                    className="bg-[#172F4D] text-white hover:bg-[#1D3B60] font-bold"
                   >
                     <Send className="w-3.5 h-3.5 mr-1" />
                     Save Note
@@ -970,24 +968,24 @@ export default function CaseTrackingPage() {
 
           {/* Notes Log */}
           <div className="space-y-3">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-gold" />
+            <h3 className="text-sm font-bold text-[#172F4D] flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-[#172F4D]" />
               Follow-Up Activity Log ({tracking.follow_up_notes.length} Entries)
             </h3>
 
             {tracking.follow_up_notes.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 bg-navy-900 rounded-xl border border-navy-800 text-xs">
+              <div className="p-8 text-center text-[#71849A] bg-white rounded-xl border border-[#DCE7F0] text-xs shadow-card">
                 No follow-up notes logged yet. Use the form above to record updates.
               </div>
             ) : (
               tracking.follow_up_notes.map((n) => (
-                <div key={n.id} className="p-4 rounded-xl bg-navy-900 border border-navy-800 space-y-1.5">
+                <div key={n.id} className="p-4 rounded-xl bg-white border border-[#DCE7F0] space-y-1.5 shadow-card">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-gold font-mono">{n.category}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">{formatDateTime(n.created_at)}</span>
+                    <span className="font-semibold text-[#172F4D] font-mono">{n.category}</span>
+                    <span className="text-[10px] text-[#71849A] font-mono">{formatDateTime(n.created_at)}</span>
                   </div>
-                  <p className="text-xs text-slate-200 leading-relaxed">{n.note_text}</p>
-                  <p className="text-[10px] text-slate-500 font-mono">Logged by: {n.author}</p>
+                  <p className="text-xs text-[#172F4D] leading-relaxed">{n.note_text}</p>
+                  <p className="text-[10px] text-[#71849A] font-mono">Logged by: {n.author}</p>
                 </div>
               ))
             )}
@@ -999,28 +997,28 @@ export default function CaseTrackingPage() {
       {activeTab === "documents" && (
         <div className="space-y-6 animate-fadeIn">
           <div>
-            <h3 className="text-base font-bold text-white">Documents Ready for Submission & Download</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h3 className="text-base font-bold text-[#172F4D]">Documents Ready for Submission & Download</h3>
+            <p className="text-xs text-[#71849A] mt-0.5">
               Structured legal and operational complaint packages compiled from verified case parameters.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {tracking.ready_documents.map((doc) => (
-              <Card key={doc.doc_type} className="p-5 flex flex-col justify-between space-y-4">
+              <Card key={doc.doc_type} className="p-5 flex flex-col justify-between space-y-4 border-[#DCE7F0] bg-white shadow-card">
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-bold text-white text-sm">{doc.title}</h4>
+                    <h4 className="font-bold text-[#172F4D] text-sm">{doc.title}</h4>
                     <Badge variant="gold" className="text-[10px] shrink-0">
                       {doc.recommended_stage.replace(/_/g, " ")}
                     </Badge>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">{doc.description}</p>
+                  <p className="text-xs text-[#71849A] leading-relaxed">{doc.description}</p>
                 </div>
 
-                <div className="pt-3 border-t border-navy-800 flex items-center justify-between gap-3">
+                <div className="pt-3 border-t border-[#DCE7F0] flex items-center justify-between gap-3">
                   <Link href={doc.view_url}>
-                    <Button variant="secondary" size="sm" className="text-xs">
+                    <Button variant="secondary" size="sm" className="text-xs bg-[#E1F1FB] text-[#172F4D] hover:bg-[#D4EBF9] border-[#DCE7F0]">
                       Inspect & Edit Draft
                     </Button>
                   </Link>
@@ -1030,7 +1028,7 @@ export default function CaseTrackingPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Button variant="gold" size="sm" className="font-bold gap-1 text-navy-950 text-xs">
+                    <Button variant="primary" size="sm" className="font-bold gap-1 text-white bg-[#172F4D] hover:bg-[#1D3B60] text-xs">
                       <Download className="w-3.5 h-3.5" />
                       Download PDF
                     </Button>
@@ -1046,8 +1044,8 @@ export default function CaseTrackingPage() {
       {activeTab === "links" && (
         <div className="space-y-6 animate-fadeIn">
           <div>
-            <h3 className="text-base font-bold text-white">Verified Official Cybercrime Reporting Links</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h3 className="text-base font-bold text-[#172F4D]">Verified Official Cybercrime Reporting Links</h3>
+            <p className="text-xs text-[#71849A] mt-0.5">
               Only interact with official Government of India and authorized banking portals. Beware of search engine phishing ads.
             </p>
           </div>
@@ -1056,34 +1054,34 @@ export default function CaseTrackingPage() {
             {dashboardData?.official_links.map((link) => (
               <div
                 key={link.name}
-                className="p-5 rounded-2xl bg-navy-900 border border-navy-800 space-y-3 flex flex-col justify-between hover:border-gold/40 transition-colors"
+                className="p-5 rounded-2xl bg-white border border-[#DCE7F0] shadow-card space-y-3 flex flex-col justify-between hover:border-[#172F4D] transition-colors"
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-bold text-white text-sm">{link.name}</h4>
-                    <span className="text-[10px] font-mono bg-emerald-500/15 text-emerald-300 px-2 py-0.5 rounded font-semibold">
+                    <h4 className="font-bold text-[#172F4D] text-sm">{link.name}</h4>
+                    <span className="text-[10px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded font-semibold">
                       {link.badge_text}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{link.description}</p>
+                  <p className="text-xs text-[#71849A] leading-relaxed">{link.description}</p>
                   {link.helpline_number && (
-                    <p className="text-xs text-gold font-mono font-bold">
+                    <p className="text-xs text-[#172F4D] font-mono font-bold">
                       Helpline: {link.helpline_number}
                     </p>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-navy-800 flex items-center justify-end">
+                <div className="pt-3 border-t border-[#DCE7F0] flex items-center justify-end">
                   {link.url.startsWith("tel:") ? (
                     <a href={link.url}>
-                      <Button variant="danger" size="sm" className="gap-1.5 text-xs font-bold">
+                      <Button variant="danger" size="sm" className="gap-1.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white">
                         <PhoneCall className="w-3.5 h-3.5" />
                         Dial {link.helpline_number}
                       </Button>
                     </a>
                   ) : (
                     <a href={link.url} target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs font-bold">
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs font-bold border-[#DCE7F0] text-[#172F4D] hover:bg-[#E1F1FB]">
                         <ExternalLink className="w-3.5 h-3.5" />
                         Open Official Portal
                       </Button>
