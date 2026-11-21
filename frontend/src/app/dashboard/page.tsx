@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  ShieldAlert, 
-  Clock, 
   FolderLock, 
   FileCheck2, 
   TrendingUp, 
@@ -15,9 +13,7 @@ import {
   PhoneCall, 
   Bot, 
   HelpCircle, 
-  ArrowRight, 
-  ShieldCheck, 
-  CheckCircle2 
+  Clock 
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +21,11 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth-context";
 import { useLanguage } from "@/context/language-context";
 import { fetchDashboardStats, fetchDashboardCases } from "@/lib/api-client";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { DashboardStats, FraudCaseSummary, CaseStatus } from "@/types";
 
 export default function DashboardPage() {
   const { user, token } = useAuth();
-  const { t } = useLanguage();
+  const { t, formatCurrency, formatDateTime } = useLanguage();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [cases, setCases] = useState<FraudCaseSummary[]>([]);
@@ -84,19 +79,19 @@ export default function DashboardPage() {
   const getStatusBadge = (status: CaseStatus) => {
     switch (status) {
       case "REVIEW_PENDING":
-        return <Badge variant="gold">Review Pending</Badge>;
+        return <Badge variant="gold">{t("status.REVIEW_PENDING", "Review Pending")}</Badge>;
       case "IN_PREPARATION":
-        return <Badge variant="default">In Preparation</Badge>;
+        return <Badge variant="default">{t("status.IN_PREPARATION", "In Preparation")}</Badge>;
       case "LIEN_REQUESTED":
-        return <Badge variant="crimson">Lien Staged</Badge>;
+        return <Badge variant="crimson">{t("status.LIEN_REQUESTED", "Lien Staged")}</Badge>;
       case "SUBMITTED_TO_CYBER_CELL":
-        return <Badge variant="success">Submitted (1930)</Badge>;
+        return <Badge variant="success">{t("status.SUBMITTED_TO_CYBER_CELL", "Submitted (1930)")}</Badge>;
       case "RECOVERED":
-        return <Badge variant="success">Funds Recovered</Badge>;
+        return <Badge variant="success">{t("status.RECOVERED", "Funds Recovered")}</Badge>;
       case "APPROVED":
-        return <Badge variant="success">User Approved</Badge>;
+        return <Badge variant="success">{t("status.APPROVED", "User Approved")}</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{t(`status.${status}`, status)}</Badge>;
     }
   };
 
@@ -110,7 +105,7 @@ export default function DashboardPage() {
             <span className="text-[#172F4D]">{user?.full_name?.split(" ")[0] || "Citizen"}</span>
           </h1>
           <p className="text-xs sm:text-sm text-[#71849A] mt-1">
-            {t("dash.overview", "Fintech Cyber Fraud Defense Overview")} • Primary Bank:{" "}
+            {t("dash.overview", "Fintech Cyber Fraud Defense Overview")} • {t("dash.primary_bank", "Primary Bank")}:{" "}
             <span className="text-[#172F4D] font-semibold">{user?.bank_name || "State Bank of India"}</span>
           </p>
         </div>
@@ -124,7 +119,7 @@ export default function DashboardPage() {
             className="text-xs text-[#71849A] hover:text-[#172F4D]"
           >
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-            Refresh
+            {t("common.refresh", "Refresh")}
           </Button>
 
           <Link href="/dashboard/report">
@@ -147,13 +142,16 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base sm:text-lg font-bold text-[#172F4D]">
-                    {t("banner.golden_hour", "Golden Hour Active")} ({stats.active_golden_hour_cases} Incident in Window)
+                    {t("dash.banner_golden_hour", "Golden Hour Active")} ({stats.active_golden_hour_cases}{" "}
+                    {t("dash.banner_incident_in_window", "Incident in Window")})
                   </h3>
-                  <Badge variant="crimson" className="text-[10px]">Critical 120-Minute Target</Badge>
+                  <Badge variant="crimson" className="text-[10px]">
+                    {t("dash.banner_critical_badge", "Critical 120-Minute Target")}
+                  </Badge>
                 </div>
                 <p className="text-xs sm:text-sm text-[#172F4D] max-w-2xl leading-relaxed">
                   {t(
-                    "banner.golden_desc",
+                    "dash.banner_golden_desc",
                     "You have an active incident reported within the 120-minute window. Inter-bank lien requests sent to the recipient bank have the maximum recovery rate right now."
                   )}
                 </p>
@@ -164,17 +162,17 @@ export default function DashboardPage() {
               <a href="tel:1930">
                 <Button variant="danger" size="md" className="font-bold text-xs gap-1.5 shadow-sm">
                   <PhoneCall className="w-4 h-4" />
-                  Call 1930
+                  {t("dash.banner_call_1930", "Call 1930")}
                 </Button>
               </a>
               <Link href="/dashboard/emergency">
                 <Button variant="primary" size="md" className="text-xs font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-sm">
-                  Emergency Checklist
+                  {t("dash.banner_checklist", "Emergency Checklist")}
                 </Button>
               </Link>
               <Link href="/dashboard/cases">
                 <Button variant="secondary" size="md" className="text-xs bg-white text-[#172F4D] border border-[#DCE7F0] hover:bg-[#F1F6FB]">
-                  {t("banner.action", "View Active Case")}
+                  {t("dash.banner_view_case", "View Active Case")}
                 </Button>
               </Link>
             </div>
@@ -189,9 +187,14 @@ export default function DashboardPage() {
             <HelpCircle className="w-5 h-5 text-[#172F4D]" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-[#172F4D]">Need Simple Guidance?</h4>
+            <h4 className="text-sm font-bold text-[#172F4D]">
+              {t("dash.need_guidance_title", "Need Simple Guidance?")}
+            </h4>
             <p className="text-xs text-[#71849A] mt-0.5">
-              Not sure how to talk to your bank or find your 12-digit UTR? Our Multilingual AI Assistant has a dedicated Senior Citizen mode in English, Telugu, and Hindi.
+              {t(
+                "dash.need_guidance_desc",
+                "Not sure how to talk to your bank or find your 12-digit UTR? Our Multilingual AI Assistant has a dedicated Senior Citizen mode in English, Telugu, and Hindi."
+              )}
             </p>
           </div>
         </div>
@@ -199,18 +202,18 @@ export default function DashboardPage() {
           <Link href="/dashboard/assistant" className="w-full md:w-auto">
             <Button variant="outline" size="sm" className="w-full md:w-auto text-xs gap-1.5">
               <Bot className="w-3.5 h-3.5" />
-              Open Assistant
+              {t("dash.open_assistant", "Open Assistant")}
             </Button>
           </Link>
           <Link href="/dashboard/emergency" className="w-full md:w-auto">
             <Button variant="secondary" size="sm" className="w-full md:w-auto text-xs">
-              Checklist & Links
+              {t("dash.checklist_links", "Checklist & Links")}
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* 4 Metric Cards (Requirement 3: Elegant light-blue icon containers, Soft green for success) */}
+      {/* 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Total Cases */}
         <Card className="hover:border-[#477DA8] transition-all">
@@ -227,10 +230,12 @@ export default function DashboardPage() {
               <span className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] font-mono">
                 {isLoading ? "--" : stats?.total_cases || 0}
               </span>
-              <span className="text-[11px] text-[#71849A] font-medium">Logged</span>
+              <span className="text-[11px] text-[#71849A] font-medium">
+                {t("dash.cases_logged", "Logged")}
+              </span>
             </div>
             <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
-              Total incidents filed in account
+              {t("dash.cases_logged_desc", "Total incidents filed in account")}
             </p>
           </CardContent>
         </Card>
@@ -250,15 +255,17 @@ export default function DashboardPage() {
               <span className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] font-mono">
                 {isLoading ? "--" : stats?.cases_in_preparation || 0}
               </span>
-              <span className="text-[11px] text-amber-700 font-bold">Draft / Review</span>
+              <span className="text-[11px] text-amber-700 font-bold">
+                {t("dash.draft_review", "Draft / Review")}
+              </span>
             </div>
             <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
-              Requires evidence or user verification
+              {t("dash.draft_review_desc", "Requires evidence or user verification")}
             </p>
           </CardContent>
         </Card>
 
-        {/* Submitted Complaints (Soft green for successful complaints) */}
+        {/* Submitted Complaints */}
         <Card className="hover:border-[#477DA8] transition-all">
           <CardContent className="p-5 space-y-2">
             <div className="flex items-center justify-between">
@@ -273,10 +280,12 @@ export default function DashboardPage() {
               <span className="text-2xl sm:text-3xl font-extrabold text-emerald-700 font-mono">
                 {isLoading ? "--" : stats?.submitted_complaints || 0}
               </span>
-              <span className="text-[11px] text-emerald-800 font-bold">1930 / Portal</span>
+              <span className="text-[11px] text-emerald-800 font-bold">
+                {t("dash.submitted_sub", "1930 / Portal")}
+              </span>
             </div>
             <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
-              Approved and lodged with authorities
+              {t("dash.submitted_desc", "Approved and lodged with authorities")}
             </p>
           </CardContent>
         </Card>
@@ -296,10 +305,15 @@ export default function DashboardPage() {
               <span className="text-xl sm:text-2xl font-extrabold text-[#172F4D] font-mono">
                 {isLoading ? "--" : formatCurrency(stats?.total_amount_recovered || 0)}
               </span>
-              <span className="text-[11px] text-emerald-700 font-bold">Lien Staged</span>
+              <span className="text-[11px] text-emerald-700 font-bold">
+                {t("dash.lien_staged", "Lien Staged")}
+              </span>
             </div>
             <p className="text-[11px] text-[#8CA0B3] pt-2 border-t border-[#DCE7F0]">
-              Of {formatCurrency(stats?.total_amount_defrauded || 0)} defrauded
+              {t("dash.of_defrauded", "Of {amount} defrauded").replace(
+                "{amount}",
+                formatCurrency(stats?.total_amount_defrauded || 0)
+              )}
             </p>
           </CardContent>
         </Card>
@@ -311,7 +325,10 @@ export default function DashboardPage() {
           <div>
             <CardTitle>{t("table.recent_cases", "Recently Created Cases")}</CardTitle>
             <CardDescription>
-              Real-time tracking of fraudulent transactions, evidence status, and cyber cell reports.
+              {t(
+                "table.recent_cases_desc",
+                "Real-time tracking of fraudulent transactions, evidence status, and cyber cell reports."
+              )}
             </CardDescription>
           </div>
 
@@ -349,7 +366,7 @@ export default function DashboardPage() {
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8CA0B3]" />
               <input
                 type="text"
-                placeholder="Search UTR or Case..."
+                placeholder={t("table.search_placeholder", "Search UTR or Case...")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#8CA0B3] focus:outline-none focus:border-[#172F4D] focus:bg-white w-44 sm:w-56 transition-colors"
@@ -362,7 +379,9 @@ export default function DashboardPage() {
           {isLoading ? (
             <div className="p-12 text-center space-y-3">
               <div className="w-8 h-8 mx-auto rounded-full border-2 border-[#172F4D] border-t-transparent animate-spin" />
-              <p className="text-xs font-mono text-[#71849A]">Loading cases from database...</p>
+              <p className="text-xs font-mono text-[#71849A]">
+                {t("table.loading", "Loading cases from database...")}
+              </p>
             </div>
           ) : filteredCases.length === 0 ? (
             <div className="p-12 text-center space-y-3">
@@ -373,11 +392,11 @@ export default function DashboardPage() {
                 {t("table.empty", "No fraud cases found.")}
               </p>
               <p className="text-xs text-[#71849A]">
-                Start by reporting an incident or uploading evidence.
+                {t("table.empty_sub", "Start by reporting an incident or uploading evidence.")}
               </p>
               <Link href="/dashboard/report">
                 <Button variant="primary" size="sm" className="mt-2 text-xs font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60]">
-                  Report a Fraud Now
+                  {t("table.report_now", "Report a Fraud Now")}
                 </Button>
               </Link>
             </div>
@@ -389,8 +408,8 @@ export default function DashboardPage() {
                     <th className="py-3.5 px-4 font-bold">{t("table.case_id", "Case ID")}</th>
                     <th className="py-3.5 px-4 font-bold">{t("table.title", "Incident Title")}</th>
                     <th className="py-3.5 px-4 font-bold">{t("table.amount", "Amount")}</th>
-                    <th className="py-3.5 px-4 font-bold">12-Digit UTR</th>
-                    <th className="py-3.5 px-4 font-bold">Beneficiary VPA</th>
+                    <th className="py-3.5 px-4 font-bold">{t("table.utr", "12-Digit UTR")}</th>
+                    <th className="py-3.5 px-4 font-bold">{t("table.vpa", "Beneficiary VPA")}</th>
                     <th className="py-3.5 px-4 font-bold">{t("table.status", "Status")}</th>
                     <th className="py-3.5 px-4 font-bold">{t("table.date", "Date")}</th>
                     <th className="py-3.5 px-4 text-right font-bold">{t("table.action", "Action")}</th>
@@ -415,10 +434,10 @@ export default function DashboardPage() {
                         {formatCurrency(c.amount_lost)}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-[#172F4D]">
-                        {c.transaction_id_utr || "Pending"}
+                        {c.transaction_id_utr || t("common.pending", "Pending")}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-[#71849A]">
-                        {c.beneficiary_upi_id || "N/A"}
+                        {c.beneficiary_upi_id || t("common.na", "N/A")}
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {getStatusBadge(c.status)}
@@ -430,12 +449,12 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-end gap-2">
                           <Link href={`/dashboard/cases/${c.id}`}>
                             <Button variant="primary" size="sm" className="text-xs py-1 px-3 font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-sm">
-                              Track
+                              {t("table.track", "Track")}
                             </Button>
                           </Link>
                           <Link href={`/dashboard/cases/${c.id}/complaints`}>
                             <Button variant="secondary" size="sm" className="text-xs py-1 px-2.5">
-                              Complaints
+                              {t("table.complaints", "Complaints")}
                             </Button>
                           </Link>
                         </div>

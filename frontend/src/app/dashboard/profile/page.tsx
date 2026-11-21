@@ -8,16 +8,11 @@ import {
   Building, 
   Globe, 
   ShieldCheck, 
-  Bell, 
   Save, 
-  CheckCircle2, 
-  AlertCircle,
-  Lock,
-  Key
+  AlertCircle
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { useAuth } from "@/context/auth-context";
 import { useLanguage } from "@/context/language-context";
@@ -96,12 +91,15 @@ export default function ProfilePage() {
         <div className="lg:col-span-2 space-y-6">
           <Card className="bg-white border-[#DCE7F0] shadow-card">
             <CardHeader>
-              <CardTitle className="text-[#172F4D]">
+              <CardTitle className="text-[#172F4D] flex items-center gap-2">
                 <User className="w-5 h-5 text-[#172F4D]" />
-                Personal Information & Bank Details
+                {t("profile.personal_info", "Personal Information & Bank Details")}
               </CardTitle>
               <CardDescription className="text-[#71849A]">
-                These details will be used to auto-populate official complaints for Cyber Crime Cell & Bank Nodal Officers.
+                {t(
+                  "profile.personal_info_desc",
+                  "These details will be used to auto-populate official complaints for Cyber Crime Cell & Bank Nodal Officers."
+                )}
               </CardDescription>
             </CardHeader>
 
@@ -181,14 +179,14 @@ export default function ProfilePage() {
 
                   <div>
                     <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                      {t("auth.language", "Preferred Language")}
+                      {t("profile.pref_lang", "Preferred Language")}
                     </label>
                     <div className="relative">
                       <Globe className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#71849A]" />
                       <select
                         value={preferredLang}
                         onChange={(e) => setPreferredLang(e.target.value as Language)}
-                        className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
+                        className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors font-medium"
                       >
                         <option value="en">English</option>
                         <option value="te">తెలుగు (Telugu)</option>
@@ -201,7 +199,7 @@ export default function ProfilePage() {
                 {/* Notifications */}
                 <div className="pt-3 border-t border-[#DCE7F0] space-y-3">
                   <p className="text-xs font-semibold text-[#172F4D]">
-                    Emergency Alert Notifications
+                    {t("profile.alerts", "Emergency Alert Notifications")}
                   </p>
                   <label className="flex items-center gap-2.5 text-xs text-[#172F4D] cursor-pointer">
                     <input
@@ -210,7 +208,7 @@ export default function ProfilePage() {
                       onChange={(e) => setSmsAlerts(e.target.checked)}
                       className="rounded bg-white border-[#DCE7F0] text-[#172F4D] focus:ring-[#172F4D]"
                     />
-                    <span>SMS alerts for recipient bank freeze confirmations</span>
+                    <span>{t("profile.sms_alerts", "SMS alerts for recipient bank freeze confirmations")}</span>
                   </label>
                   <label className="flex items-center gap-2.5 text-xs text-[#172F4D] cursor-pointer">
                     <input
@@ -219,7 +217,7 @@ export default function ProfilePage() {
                       onChange={(e) => setEmailAlerts(e.target.checked)}
                       className="rounded bg-white border-[#DCE7F0] text-[#172F4D] focus:ring-[#172F4D]"
                     />
-                    <span>Email copies of AI-generated complaint drafts</span>
+                    <span>{t("profile.email_alerts", "Email copies of AI-generated complaint drafts")}</span>
                   </label>
                 </div>
 
@@ -247,46 +245,15 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2 text-emerald-800">
                 <ShieldCheck className="w-5 h-5 text-emerald-600" />
                 <CardTitle className="text-sm text-emerald-950">
-                  Zero-Credential Policy
+                  {t("profile.security_notice", "Zero-PIN Security Policy")}
                 </CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 text-xs text-[#172F4D] leading-relaxed pt-4">
-              <p>
-                GoldenHour is built with strict privacy sandboxing:
-              </p>
-              <ul className="space-y-1.5 list-disc pl-4 text-[#71849A]">
-                <li>Never asks for UPI PIN or MPIN.</li>
-                <li>Never records OTPs or passwords.</li>
-                <li>Evidence screenshots are sanitized and stripped of private credentials before analysis.</li>
-              </ul>
-              <div className="pt-2">
-                <Badge variant="success">Zero-PIN Compliant</Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border-[#DCE7F0] shadow-card">
-            <CardHeader className="pb-3 border-b border-[#DCE7F0]">
-              <CardTitle className="text-sm text-[#172F4D]">Account Metadata</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-xs pt-4">
-              <div className="flex justify-between py-1 border-b border-[#DCE7F0]">
-                <span className="text-[#71849A]">Account ID:</span>
-                <span className="font-mono text-[#172F4D]">{user?.id.slice(0, 15)}...</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-[#DCE7F0]">
-                <span className="text-[#71849A]">Auth Provider:</span>
-                <span className="font-mono text-[#172F4D] font-medium">Supabase Auth</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-[#DCE7F0]">
-                <span className="text-[#71849A]">Active Language:</span>
-                <span className="font-mono text-[#172F4D] uppercase font-bold">{language}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-[#71849A]">Status:</span>
-                <span className="font-mono text-emerald-700 font-bold">Verified Citizen</span>
-              </div>
+            <CardContent className="pt-3 text-xs text-emerald-900 leading-relaxed">
+              {t(
+                "profile.security_notice",
+                "Zero-PIN Security Policy: GoldenHour never asks for or stores UPI PINs, OTPs, or passwords."
+              )}
             </CardContent>
           </Card>
         </div>

@@ -15,8 +15,11 @@ import {
   UserVerificationPayload,
   CaseVerificationReport,
   ConfirmVerificationPayload,
+  AssistantLanguage,
   AssistantChatRequest,
   AssistantChatResponse,
+  TranslateHistoryRequest,
+  TranslateHistoryResponse,
   CaseComplaintBundle,
   GeneratedDocument,
   ComplaintDocType,
@@ -495,6 +498,28 @@ export async function sendAssistantChat(
     return {
       success: false,
       error: { message: err.message || "Failed to communicate with AI Assistant" },
+    };
+  }
+}
+
+export async function translateAssistantHistory(
+  messages: Array<Record<string, any>>,
+  targetLanguage: AssistantLanguage
+): Promise<ApiResponse<TranslateHistoryResponse>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/assistant/translate-history`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages,
+        target_language: targetLanguage,
+      }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return {
+      success: false,
+      error: { message: err.message || "Failed to translate conversation history" },
     };
   }
 }

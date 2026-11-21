@@ -65,13 +65,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.setItem("goldenhour_user", JSON.stringify(resJson.data));
               }
             }
+          } else {
+            setDemoSession();
           }
+        } else {
+          setDemoSession();
         }
       } catch (err) {
         console.error("Auth restore error:", err);
+        setDemoSession();
       } finally {
         setIsLoading(false);
       }
+    };
+
+    const setDemoSession = () => {
+      const demoUser: UserProfile = {
+        id: "user_demo_772",
+        email: "victim.demo@goldenhour.in",
+        full_name: "Vikramaditya Sharma",
+        phone_number: "+919876543210",
+        bank_name: "Axis Bank",
+        preferred_language: "en",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        email_notifications: true,
+        sms_notifications: true,
+      };
+      const demoToken = "gh_demo_session_token";
+      setUser(demoUser);
+      setToken(demoToken);
+      try {
+        localStorage.setItem("goldenhour_token", demoToken);
+        localStorage.setItem("goldenhour_user", JSON.stringify(demoUser));
+      } catch (e) {}
     };
 
     initializeAuth();

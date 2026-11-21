@@ -7,7 +7,6 @@ import {
   ShieldAlert, 
   UploadCloud, 
   FileText, 
-  Image as ImageIcon, 
   Trash2, 
   CheckCircle2, 
   AlertCircle, 
@@ -15,32 +14,22 @@ import {
   Clock, 
   Eye, 
   X, 
-  Plus, 
-  Calendar, 
-  Phone, 
-  Mail, 
   ArrowRight, 
   Sparkles, 
-  Lock,
-  RefreshCw,
-  Info,
-  CheckCircle,
-  HelpCircle,
-  AlertTriangle,
-  Terminal,
-  Code2,
-  Copy,
-  ChevronDown,
-  ChevronUp
+  RefreshCw, 
+  CheckCircle, 
+  AlertTriangle, 
+  Terminal, 
+  Copy, 
+  ChevronDown, 
+  ChevronUp 
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert } from "@/components/ui/alert";
 import { useAuth } from "@/context/auth-context";
 import { useLanguage } from "@/context/language-context";
 import { analyzeEvidenceIntake, createFraudCase } from "@/lib/api-client";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { IntakeAnalysisResult, FraudCaseDetail } from "@/types";
 
 interface QueuedFile {
@@ -49,19 +38,10 @@ interface QueuedFile {
   previewUrl: string;
 }
 
-const EXTRACTION_STAGES = [
-  { step: 1, label: "Uploading evidence" },
-  { step: 2, label: "Processing image" },
-  { step: 3, label: "Extracting text using OCR" },
-  { step: 4, label: "Analysing screenshot using Claude Vision" },
-  { step: 5, label: "Validating extracted transaction details" },
-  { step: 6, label: "Displaying extraction results" },
-];
-
 export default function ReportFraudPage() {
   const router = useRouter();
   const { user, token } = useAuth();
-  const { t } = useLanguage();
+  const { t, formatCurrency, formatDateTime } = useLanguage();
 
   // Step 1: Upload Screenshots state
   const [queuedFiles, setQueuedFiles] = useState<QueuedFile[]>([]);
@@ -93,6 +73,15 @@ export default function ReportFraudPage() {
   // Image Preview Modal
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const [previewModalName, setPreviewModalName] = useState<string>("");
+
+  const EXTRACTION_STAGES = [
+    { step: 1, label: t("report.stage_uploading", "Uploading evidence") },
+    { step: 2, label: t("report.stage_processing", "Processing image") },
+    { step: 3, label: t("report.stage_ocr", "Extracting text using OCR") },
+    { step: 4, label: t("report.stage_claude", "Analysing screenshot using Claude Vision") },
+    { step: 5, label: t("report.stage_validating", "Validating extracted transaction details") },
+    { step: 6, label: t("report.stage_displaying", "Displaying extraction results") },
+  ];
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -142,54 +131,49 @@ export default function ReportFraudPage() {
   };
 
   const removeFile = (id: string) => {
-    setQueuedFiles((prev) => {
-      const filtered = prev.filter((item) => item.id !== id);
-      return filtered;
-    });
+    setQueuedFiles((prev) => prev.filter((item) => item.id !== id));
   };
 
   // Trigger AI Extraction on Uploaded Screenshots
   const handleExtractWithAI = async () => {
     if (queuedFiles.length === 0) {
-      setErrorMsg("Please select at least one fraud screenshot to analyze.");
+      setErrorMsg(t("report.no_files_warning", "Please select at least one fraud screenshot to analyze."));
       return;
     }
 
-    // Clear previous timers
     stageTimersRef.current.forEach((t) => clearTimeout(t));
     stageTimersRef.current = [];
 
     setErrorMsg(null);
     setIsAnalyzing(true);
     setExtractionStage(1);
-    setAnalysisProgress("Uploading evidence screenshots to secure processing engine...");
+    setAnalysisProgress(t("report.stage_uploading", "Uploading evidence screenshots to secure processing engine..."));
 
-    // Staged feedback simulation synchronized with analysis
     stageTimersRef.current.push(
       setTimeout(() => {
         setExtractionStage(2);
-        setAnalysisProgress("Processing original image with orientation and contrast enhancement...");
+        setAnalysisProgress(t("report.stage_processing", "Processing original image with orientation and contrast enhancement..."));
       }, 500)
     );
 
     stageTimersRef.current.push(
       setTimeout(() => {
         setExtractionStage(3);
-        setAnalysisProgress("Extracting text via Windows Native / PaddleOCR engine...");
+        setAnalysisProgress(t("report.stage_ocr", "Extracting text via Windows Native / PaddleOCR engine..."));
       }, 1200)
     );
 
     stageTimersRef.current.push(
       setTimeout(() => {
         setExtractionStage(4);
-        setAnalysisProgress("Analysing screenshot context via Claude Vision...");
+        setAnalysisProgress(t("report.stage_claude", "Analysing screenshot context via Claude Vision..."));
       }, 2000)
     );
 
     stageTimersRef.current.push(
       setTimeout(() => {
         setExtractionStage(5);
-        setAnalysisProgress("Validating extracted transaction details & sensitive data redactions...");
+        setAnalysisProgress(t("report.stage_validating", "Validating extracted transaction details & sensitive data redactions..."));
       }, 2800)
     );
 
@@ -205,7 +189,7 @@ export default function ReportFraudPage() {
       }
 
       setExtractionStage(6);
-      setAnalysisProgress("Displaying extraction results.");
+      setAnalysisProgress(t("report.stage_displaying", "Displaying extraction results."));
 
       setIntakeResult(res.data);
       setCustomTitle(res.data.incident_title);
@@ -277,16 +261,19 @@ export default function ReportFraudPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] tracking-tight">
-            Report a Fraud Incident
+            {t("report.page_title", "Report a Cyber Fraud Incident")}
           </h1>
           <p className="text-xs sm:text-sm text-[#71849A] mt-1">
-            Upload screenshots of your UPI receipts, bank debits, or scammer chats. Our AI extracts transaction parameters automatically.
+            {t(
+              "report.page_subtitle",
+              "Upload screenshots of your UPI receipts, bank debits, or scammer chats. Our AI extracts transaction parameters automatically."
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge className="bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0] px-3 py-1 flex items-center gap-1.5 font-semibold text-xs">
             <Clock className="w-3.5 h-3.5 text-[#172F4D]" />
-            Golden Hour Protocol Active
+            {t("cases.golden_hour_active", "Golden Hour Protocol Active")}
           </Badge>
         </div>
       </div>
@@ -309,7 +296,7 @@ export default function ReportFraudPage() {
               className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-3.5 py-1.5 shrink-0 flex items-center justify-center gap-1.5 rounded-lg shadow-sm"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Retry AI Extraction
+              {t("common.refresh", "Retry AI Extraction")}
             </Button>
           )}
         </div>
@@ -325,10 +312,11 @@ export default function ReportFraudPage() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-[#172F4D]">
-                  Fraud Case Registered Successfully
+                  {t("report.case_created_success", "Fraud Case Registered Successfully")}
                 </h3>
                 <p className="text-xs text-[#71849A]">
-                  Case Reference: <span className="font-semibold text-[#172F4D]">{createdCase.case_number}</span>
+                  {t("table.case_id", "Case Reference")}:{" "}
+                  <span className="font-semibold text-[#172F4D]">{createdCase.case_number}</span>
                 </p>
               </div>
             </div>
@@ -336,25 +324,33 @@ export default function ReportFraudPage() {
           <CardContent className="p-6 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
-                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">Amount Defrauded</span>
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">
+                  {t("report.amount_label", "Amount Defrauded")}
+                </span>
                 <span className="text-base font-bold text-[#172F4D] mt-1 block">
                   {formatCurrency(createdCase.amount_lost)}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
-                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">12-Digit UTR</span>
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">
+                  {t("report.extracted_utr", "12-Digit UTR")}
+                </span>
                 <span className="text-sm font-bold text-[#172F4D] mt-1 block font-mono">
-                  {createdCase.transaction_id_utr || "Pending Bank Verify"}
+                  {createdCase.transaction_id_utr || t("common.pending", "Pending Bank Verify")}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
-                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">Beneficiary UPI VPA</span>
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">
+                  {t("report.extracted_vpa", "Beneficiary UPI VPA")}
+                </span>
                 <span className="text-sm font-semibold text-[#172F4D] mt-1 block truncate">
-                  {createdCase.beneficiary_upi_id || "Not Found"}
+                  {createdCase.beneficiary_upi_id || t("report.not_found", "Not Found")}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
-                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">Evidence Files Attached</span>
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">
+                  {t("cases.evidence_items", "Evidence Files Attached")}
+                </span>
                 <span className="text-base font-bold text-[#172F4D] mt-1 block">
                   {createdCase.evidence_count} file(s)
                 </span>
@@ -364,9 +360,8 @@ export default function ReportFraudPage() {
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
               <div>
-                <p className="font-semibold text-amber-900">Next Step: Execute the 3-Stage Emergency Response Checklist</p>
-                <p className="text-amber-800 text-xs mt-1">
-                  Contact the 1930 Cybercrime Helpline immediately and notify your bank branch to request a lien freeze on the beneficiary account before the Golden Hour expires.
+                <p className="font-semibold text-amber-900">
+                  {t("report.case_created_desc", "Your dispute has been logged. Emergency checklist and bank lien documents are ready.")}
                 </p>
               </div>
             </div>
@@ -376,7 +371,7 @@ export default function ReportFraudPage() {
                 onClick={() => router.push("/dashboard/emergency")}
                 className="w-full sm:w-auto bg-[#172F4D] hover:bg-[#263F61] text-white font-semibold px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-sm"
               >
-                Open Emergency Response & Case Tracking
+                {t("report.go_to_tracking", "Open Emergency Response & Case Tracking")}
                 <ArrowRight className="w-4 h-4" />
               </Button>
               <Button
@@ -384,7 +379,7 @@ export default function ReportFraudPage() {
                 onClick={() => router.push(`/dashboard/cases/${createdCase.id}`)}
                 className="w-full sm:w-auto border-[#DCE7F0] text-[#172F4D] hover:bg-[#F1F6FB] px-6 py-2.5 rounded-xl font-medium"
               >
-                View Case Dossier
+                {t("report.view_case", "View Case Dossier")}
               </Button>
             </div>
           </CardContent>
@@ -401,15 +396,15 @@ export default function ReportFraudPage() {
                   </div>
                   <div>
                     <CardTitle className="text-base sm:text-lg font-bold text-[#172F4D]">
-                      Upload Fraud Screenshots & Evidence
+                      {t("report.step1_title", "Upload Fraud Screenshots & Evidence")}
                     </CardTitle>
                     <CardDescription className="text-xs text-[#71849A]">
-                      Main Input: Upload UPI payment receipts, bank debit SMS, or WhatsApp conversations.
+                      {t("report.step1_desc", "Upload UPI payment receipts, bank debit SMS, or WhatsApp conversations.")}
                     </CardDescription>
                   </div>
                 </div>
                 <Badge className="bg-white text-[#172F4D] border-[#DCE7F0] text-[11px] font-semibold">
-                  Primary Input
+                  {t("common.active", "Primary Input")}
                 </Badge>
               </div>
             </CardHeader>
@@ -442,10 +437,13 @@ export default function ReportFraudPage() {
                   <UploadCloud className="w-7 h-7 text-[#172F4D]" />
                 </div>
                 <h3 className="text-sm sm:text-base font-bold text-[#172F4D]">
-                  Drop fraud screenshots here, or click to browse
+                  {t("report.drag_drop_text", "Drop fraud screenshots here, or click to browse")}
                 </h3>
                 <p className="text-xs text-[#71849A] mt-1 max-w-md mx-auto">
-                  Supports PhonePe, Google Pay, Paytm, BHIM, bank statements, SMS alerts, and WhatsApp chat screenshots (PNG, JPG, PDF up to 15MB).
+                  {t(
+                    "report.file_support",
+                    "Supports PhonePe, Google Pay, Paytm, BHIM, bank statements, SMS alerts, and WhatsApp chat screenshots (PNG, JPG, PDF up to 15MB)."
+                  )}
                 </p>
                 <div className="flex items-center justify-center gap-4 mt-4 text-[11px] text-[#71849A]">
                   <span className="flex items-center gap-1">
@@ -463,14 +461,14 @@ export default function ReportFraudPage() {
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-[#172F4D] uppercase tracking-wider">
-                      Selected Evidence Files ({queuedFiles.length})
+                      {t("report.queued_files", "Selected Evidence Files")} ({queuedFiles.length})
                     </h4>
                     <button
                       type="button"
                       onClick={() => setQueuedFiles([])}
                       className="text-xs text-red-600 hover:text-red-700 font-medium"
                     >
-                      Clear all
+                      {t("common.delete", "Clear all")}
                     </button>
                   </div>
 
@@ -533,12 +531,12 @@ export default function ReportFraudPage() {
                       {isAnalyzing ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin" />
-                          Analyzing Screenshots with AI...
+                          {t("report.extracting", "Analyzing Screenshots with AI...")}
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4 text-sky-300" />
-                          Extract Fraud Details with AI
+                          {t("report.extract_button", "Extract Fraud Details with AI")}
                         </>
                       )}
                     </Button>
@@ -554,7 +552,7 @@ export default function ReportFraudPage() {
                       <RefreshCw className="w-5 h-5 text-[#172F4D] animate-spin shrink-0" />
                       <div>
                         <p className="text-sm font-bold text-[#172F4D]">
-                          AI Evidence Extraction Pipeline Active
+                          {t("report.step2_title", "AI Evidence Extraction Pipeline Active")}
                         </p>
                         <p className="text-xs text-[#71849A]">
                           {analysisProgress}
@@ -562,7 +560,7 @@ export default function ReportFraudPage() {
                       </div>
                     </div>
                     <span className="text-xs font-semibold text-[#172F4D] bg-white px-3 py-1 rounded-full border border-[#DCE7F0] shrink-0 self-start sm:self-auto shadow-2xs">
-                      Stage {Math.min(extractionStage || 1, 6)} of 6
+                      {t("common.next", "Stage")} {Math.min(extractionStage || 1, 6)} / 6
                     </span>
                   </div>
 
@@ -644,7 +642,7 @@ export default function ReportFraudPage() {
                   <AlertTriangle className="w-5 h-5 shrink-0 text-[#477DA8] mt-0.5" />
                   <div className="space-y-1">
                     <p className="font-semibold text-[#172F4D]">
-                      Missing Evidence Notice
+                      {t("report.missing_notice", "Missing Evidence Notice")}
                     </p>
                     <p className="text-[#477DA8] text-xs">
                       The following field(s) were not detected in the uploaded evidence:{" "}
@@ -665,7 +663,7 @@ export default function ReportFraudPage() {
                       </div>
                       <div>
                         <CardTitle className="text-base sm:text-lg font-bold text-[#172F4D]">
-                          AI-Extracted Incident Details
+                          {t("report.step2_title", "AI-Extracted Incident Details")}
                         </CardTitle>
                         <CardDescription className="text-xs text-[#71849A]">
                           Extracted from {intakeResult.uploaded_evidence.length} evidence file(s). Review parameters below.
@@ -674,7 +672,7 @@ export default function ReportFraudPage() {
                     </div>
                     <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[11px] font-semibold flex items-center gap-1">
                       <CheckCircle className="w-3 h-3 text-emerald-600" />
-                      AI Extracted
+                      {t("report.extraction_success", "AI Extracted")}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -687,7 +685,7 @@ export default function ReportFraudPage() {
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider">
-                            12-Digit UTR
+                            {t("report.extracted_utr", "12-Digit UTR")}
                           </span>
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                             intakeResult.fields?.transaction_id_utr?.status === "Extracted" || intakeResult.transaction_id_utr
@@ -703,7 +701,7 @@ export default function ReportFraudPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-[#71849A] italic mt-1 block">
-                            Not found in uploaded evidence
+                            {t("report.not_found", "Not found in uploaded evidence")}
                           </span>
                         )}
                       </div>
@@ -719,7 +717,7 @@ export default function ReportFraudPage() {
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider">
-                            Beneficiary UPI VPA
+                            {t("report.extracted_vpa", "Beneficiary UPI VPA")}
                           </span>
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                             intakeResult.fields?.beneficiary_upi_id?.status === "Extracted" || intakeResult.beneficiary_upi_id
@@ -735,7 +733,7 @@ export default function ReportFraudPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-[#71849A] italic mt-1 block">
-                            Not found in uploaded evidence
+                            {t("report.not_found", "Not found in uploaded evidence")}
                           </span>
                         )}
                       </div>
@@ -751,7 +749,7 @@ export default function ReportFraudPage() {
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider">
-                            Fraudster Phone
+                            {t("report.extracted_phone", "Fraudster Phone")}
                           </span>
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                             intakeResult.fields?.fraudster_phone?.status === "Extracted" || intakeResult.fraudster_phone
@@ -767,7 +765,7 @@ export default function ReportFraudPage() {
                           </span>
                         ) : (
                           <span className="text-xs text-[#71849A] italic mt-1 block">
-                            Not found in uploaded evidence
+                            {t("report.not_found", "Not found in uploaded evidence")}
                           </span>
                         )}
                       </div>
@@ -781,7 +779,7 @@ export default function ReportFraudPage() {
                     {/* Scam Category */}
                     <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
                       <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider block mb-1.5">
-                        Scam Category
+                        {t("report.scam_category_label", "Scam Category")}
                       </span>
                       <select
                         value={selectedCategory || intakeResult.scam_category}
@@ -816,12 +814,12 @@ export default function ReportFraudPage() {
                     {/* Transaction Timestamp */}
                     <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
                       <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider block">
-                        Transaction Date & Time
+                        {t("report.extracted_datetime", "Transaction Date & Time")}
                       </span>
                       <span className="text-xs font-semibold text-[#172F4D] mt-1.5 block">
                         {intakeResult.transaction_date_time
                           ? formatDateTime(intakeResult.transaction_date_time)
-                          : "Not found in evidence"}
+                          : t("report.not_found", "Not found in evidence")}
                       </span>
                       {intakeResult.fields?.transaction_date_time?.source_screenshot && (
                         <span className="text-[10px] text-[#71849A] mt-1.5 block truncate">
@@ -835,7 +833,7 @@ export default function ReportFraudPage() {
                   <div className="space-y-4 pt-2">
                     <div>
                       <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider mb-1.5">
-                        Incident Headline
+                        {t("report.incident_title_label", "Incident Headline")}
                       </label>
                       <input
                         type="text"
@@ -847,7 +845,7 @@ export default function ReportFraudPage() {
 
                     <div>
                       <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider mb-1.5">
-                        Detailed Incident Narrative
+                        {t("report.incident_desc_label", "Detailed Incident Narrative")}
                       </label>
                       <textarea
                         rows={3}
@@ -953,15 +951,15 @@ export default function ReportFraudPage() {
                       </div>
                       <div>
                         <CardTitle className="text-base sm:text-lg font-bold text-[#172F4D]">
-                          Enter Amount Defrauded (INR)
+                          {t("report.step3_title", "Enter Amount Defrauded & Incident Details")}
                         </CardTitle>
                         <CardDescription className="text-xs text-[#71849A]">
-                          The single required numeric field. Enter or verify the exact amount lost.
+                          {t("report.amount_help", "The single required numeric field. Enter or verify the exact amount lost.")}
                         </CardDescription>
                       </div>
                     </div>
                     <Badge className="bg-[#172F4D] text-white text-[11px] font-semibold">
-                      Manual Input
+                      {t("common.active", "Manual Input")}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -969,7 +967,7 @@ export default function ReportFraudPage() {
                 <CardContent className="p-6 space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider mb-2">
-                      Amount Defrauded (INR) *
+                      {t("report.amount_label", "Amount Defrauded (INR ₹)")} *
                     </label>
                     <div className="relative max-w-xs">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-base font-bold text-[#172F4D]">
@@ -982,13 +980,16 @@ export default function ReportFraudPage() {
                         required
                         value={amountDefrauded}
                         onChange={(e) => setAmountDefrauded(e.target.value)}
-                        placeholder="e.g. 25000"
+                        placeholder={t("report.amount_placeholder", "e.g. 25000")}
                         className="w-full pl-8 pr-4 py-3 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-lg font-bold text-[#172F4D] placeholder-[#8CA0B3] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
                       />
                     </div>
                     {intakeResult.suggested_amount && (
                       <p className="text-[11px] text-[#71849A] mt-1.5">
-                        Suggested from receipt OCR: <span className="font-semibold text-[#172F4D]">₹{intakeResult.suggested_amount}</span>
+                        Suggested from receipt OCR:{" "}
+                        <span className="font-semibold text-[#172F4D]">
+                          {formatCurrency(intakeResult.suggested_amount)}
+                        </span>
                       </p>
                     )}
                   </div>
@@ -1002,7 +1003,7 @@ export default function ReportFraudPage() {
                     <div className="flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-emerald-600" />
                       <CardTitle className="text-xs sm:text-sm font-bold text-[#172F4D]">
-                        Complainant Identity (Auto-filled from Profile)
+                        {t("cases.victim_info", "Complainant Identity (Auto-filled from Profile)")}
                       </CardTitle>
                     </div>
                     <span className="text-[11px] text-[#71849A]">No manual re-entry required</span>
@@ -1010,15 +1011,15 @@ export default function ReportFraudPage() {
                 </CardHeader>
                 <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   <div>
-                    <span className="text-[#71849A] block">Full Name</span>
+                    <span className="text-[#71849A] block">{t("auth.full_name", "Full Name")}</span>
                     <span className="font-semibold text-[#172F4D]">{user?.full_name || "Citizen Complainant"}</span>
                   </div>
                   <div>
-                    <span className="text-[#71849A] block">Registered Phone</span>
+                    <span className="text-[#71849A] block">{t("auth.phone", "Registered Phone")}</span>
                     <span className="font-semibold text-[#172F4D]">{user?.phone_number || "Not specified"}</span>
                   </div>
                   <div>
-                    <span className="text-[#71849A] block">Email Address</span>
+                    <span className="text-[#71849A] block">{t("auth.email", "Email Address")}</span>
                     <span className="font-semibold text-[#172F4D]">{user?.email || "Not specified"}</span>
                   </div>
                 </CardContent>
@@ -1037,12 +1038,12 @@ export default function ReportFraudPage() {
                   {isSubmitting ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      Registering Case...
+                      {t("report.submitting_button", "Registering Case...")}
                     </>
                   ) : (
                     <>
                       <ShieldAlert className="w-5 h-5 text-amber-300" />
-                      Create Fraud Case & Begin Emergency Defense
+                      {t("report.submit_button", "Create Fraud Case & Begin Emergency Defense")}
                     </>
                   )}
                 </Button>

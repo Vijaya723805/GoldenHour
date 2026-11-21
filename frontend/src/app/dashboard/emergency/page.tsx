@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   PhoneCall,
-  ShieldAlert,
   Clock,
   CheckCircle2,
   AlertTriangle,
@@ -26,15 +25,13 @@ import {
   History,
   X,
   Copy,
-  Check,
-  Calendar,
-  Building2,
-  UserCheck
+  Check
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth-context";
+import { useLanguage } from "@/context/language-context";
 import {
   fetchDashboardCases,
   fetchCaseTracking,
@@ -47,13 +44,11 @@ import {
   generateCaseComplaints,
   fetchOfficialReportingLinks
 } from "@/lib/api-client";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
 import {
   FraudCaseSummary,
   CaseTrackingDetail,
   EmergencyChecklistItem,
   ComplaintStatus,
-  FollowUpNote,
   OfficialLinkItem
 } from "@/types";
 
@@ -70,6 +65,8 @@ const STATUS_LABELS: Record<ComplaintStatus, { label: string; badgeClass: string
 
 export default function EmergencyResponseDashboardPage() {
   const { token } = useAuth();
+  const { t, formatCurrency, formatDateTime } = useLanguage();
+
   const [cases, setCases] = useState<FraudCaseSummary[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
   const [tracking, setTracking] = useState<CaseTrackingDetail | null>(null);
@@ -138,9 +135,7 @@ export default function EmergencyResponseDashboardPage() {
       const res = await fetchCaseTracking(selectedCaseId, token);
       if (res.success && res.data) {
         setTracking(res.data);
-        // Sync complaint status
         setSelectedStatus(res.data.complaint_status || "NOT_SUBMITTED");
-        // Sync reference numbers
         setNcrpToken(res.data.ncrp_acknowledgement_token || "");
         setBankSr(res.data.bank_dispute_sr_number || "");
         setPoliceRef(res.data.police_station_ref || "");
@@ -186,7 +181,7 @@ export default function EmergencyResponseDashboardPage() {
     }
   };
 
-  // Manual Complaint Status Save (ONLY on explicit user click)
+  // Manual Complaint Status Save
   const handleSaveComplaintStatus = async () => {
     if (!selectedCaseId || isUpdatingStatus) return;
     setIsUpdatingStatus(true);
@@ -196,7 +191,7 @@ export default function EmergencyResponseDashboardPage() {
       if (res.success && res.data) {
         setTracking(res.data);
         setStatusNote("");
-        showToast("success", `Complaint status updated to "${STATUS_LABELS[selectedStatus]?.label || selectedStatus}".`);
+        showToast("success", `Complaint status updated to "${t(`status.${selectedStatus}`, STATUS_LABELS[selectedStatus]?.label || selectedStatus)}".`);
       } else {
         showToast("error", res.error?.message || "Failed to update status.");
       }
@@ -207,7 +202,7 @@ export default function EmergencyResponseDashboardPage() {
     }
   };
 
-  // Save Reference Numbers (automatically completes submission checklist items)
+  // Save Reference Numbers
   const handleSaveReferences = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCaseId || isSavingRefs) return;
@@ -303,7 +298,6 @@ export default function EmergencyResponseDashboardPage() {
     try {
       const res = await generateCaseComplaints(selectedCaseId, "en", true, token);
       if (res.success && res.data) {
-        // Reload tracking to reflect generated docs and updated checklist
         const trackRes = await fetchCaseTracking(selectedCaseId, token);
         if (trackRes.success && trackRes.data) {
           setTracking(trackRes.data);
@@ -348,6 +342,7 @@ export default function EmergencyResponseDashboardPage() {
 
   const selectedCase = cases.find((c) => c.id === selectedCaseId);
   const currentStatusConfig = STATUS_LABELS[tracking?.complaint_status || "NOT_SUBMITTED"];
+  const currentStatusLabel = t(`status.${tracking?.complaint_status || "NOT_SUBMITTED"}`, currentStatusConfig.label);
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto animate-fadeIn pb-16">
@@ -355,10 +350,13 @@ export default function EmergencyResponseDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] tracking-tight">
-            Emergency Response & Case Tracking
+            {t("emer.title", "Emergency Response & Case Tracking (M7)")}
           </h1>
           <p className="text-xs sm:text-sm text-[#71849A] mt-1">
-            Golden Hour response console with verified 1930 protocol, automated legal drafting, and real-time case tracking.
+            {t(
+              "emer.subtitle",
+              "Golden Hour response console with verified 1930 protocol, automated legal drafting, and real-time case tracking."
+            )}
           </p>
         </div>
 
@@ -413,12 +411,12 @@ export default function EmergencyResponseDashboardPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
-                Critical Helpline
+                {t("nav.emergency_priority", "Critical Helpline")}
               </span>
-              <span className="text-xs text-[#71849A]">Citizen Financial Cyber Fraud Reporting System</span>
+              <span className="text-xs text-[#71849A]">{t("nav.app_subtitle", "Citizen Financial Cyber Fraud Reporting System")}</span>
             </div>
             <h2 className="text-base sm:text-lg font-bold text-[#172F4D] mt-1">
-              National Cyber Helpline: Dial 1930
+              {t("nav.helpline", "National Cyber Helpline: Dial 1930")}
             </h2>
             <p className="text-xs text-[#477DA8] mt-0.5 max-w-xl">
               Connects directly with the MHA Cyber Crime Cell to freeze fraudulent beneficiary wallets/accounts across banks.
@@ -431,7 +429,7 @@ export default function EmergencyResponseDashboardPage() {
           className="inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-sm transition-colors shrink-0"
         >
           <PhoneCall className="w-4 h-4" />
-          Call 1930 Now (Toll-Free)
+          {t("nav.call_1930", "Call 1930 Now (Toll-Free)")}
         </a>
       </div>
 
@@ -442,7 +440,7 @@ export default function EmergencyResponseDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#DCE7F0] pb-4">
               <div>
                 <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider">
-                  Active Case: {selectedCase.case_number}
+                  {t("table.case_id", "Active Case")}: {selectedCase.case_number}
                 </span>
                 <h3 className="text-sm sm:text-base font-bold text-[#172F4D] mt-0.5">
                   {selectedCase.title}
@@ -450,14 +448,14 @@ export default function EmergencyResponseDashboardPage() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <span className="text-[11px] text-[#71849A] block">Defrauded Amount</span>
+                  <span className="text-[11px] text-[#71849A] block">{t("table.amount", "Defrauded Amount")}</span>
                   <span className="text-sm font-bold text-[#172F4D]">
                     {formatCurrency(selectedCase.amount_lost)}
                   </span>
                 </div>
                 {selectedCase.transaction_id_utr && (
                   <div className="text-right border-l border-[#DCE7F0] pl-3">
-                    <span className="text-[11px] text-[#71849A] block">12-Digit UTR</span>
+                    <span className="text-[11px] text-[#71849A] block">{t("table.utr", "12-Digit UTR")}</span>
                     <span className="text-sm font-bold text-[#172F4D] font-mono">
                       {selectedCase.transaction_id_utr}
                     </span>
@@ -469,9 +467,9 @@ export default function EmergencyResponseDashboardPage() {
             {/* Checklist Progress Bar */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-[#172F4D]">
-                <span>Emergency Action Progress</span>
+                <span>{t("emer.progress_label", "Emergency Action Progress")}</span>
                 <span>
-                  {totalCompleted} of {totalItems} completed ({overallPercentage}%)
+                  {totalCompleted} / {totalItems} {t("common.completed", "completed")} ({overallPercentage}%)
                 </span>
               </div>
               <div className="w-full h-2.5 bg-[#F1F6FB] rounded-full overflow-hidden border border-[#DCE7F0]">
@@ -485,7 +483,7 @@ export default function EmergencyResponseDashboardPage() {
         </Card>
       )}
 
-      {/* DEDICATED MANUAL COMPLAINT STATUS CARD (ONLY UPDATES ON EXPLICIT BUTTON CLICK) */}
+      {/* DEDICATED MANUAL COMPLAINT STATUS CARD */}
       <Card className="border-[#DCE7F0] shadow-sm bg-white overflow-hidden">
         <CardHeader className="bg-[#F1F6FB]/80 border-b border-[#DCE7F0] p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -495,19 +493,22 @@ export default function EmergencyResponseDashboardPage() {
               </div>
               <div>
                 <CardTitle className="text-sm sm:text-base font-bold text-[#172F4D]">
-                  Official Complaint Status (Manual Tracking)
+                  {t("emer.status_update_title", "Official Complaint Status (Manual Tracking)")}
                 </CardTitle>
                 <CardDescription className="text-xs text-[#71849A]">
-                  Track legal and banking progress. Never auto-switches; updates only on your explicit confirmation.
+                  {t(
+                    "emer.status_update_desc",
+                    "Track legal and banking progress. Never auto-switches; updates only on your explicit confirmation."
+                  )}
                 </CardDescription>
               </div>
             </div>
 
             {/* Current Status Pill */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#71849A]">Current Status:</span>
+              <span className="text-xs text-[#71849A]">{t("table.status", "Current Status")}:</span>
               <span className={`text-xs font-bold px-3 py-1 rounded-full border ${currentStatusConfig.badgeClass}`}>
-                {currentStatusConfig.label}
+                {currentStatusLabel}
               </span>
             </div>
           </div>
@@ -518,26 +519,26 @@ export default function EmergencyResponseDashboardPage() {
             {/* Status Dropdown */}
             <div className="sm:col-span-4">
               <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                Update Status To
+                {t("emer.status_label", "Update Status To")}
               </label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as ComplaintStatus)}
                 className="w-full px-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs font-semibold text-[#172F4D] focus:outline-none focus:border-[#172F4D]"
               >
-                <option value="NOT_SUBMITTED">1. Not Submitted</option>
-                <option value="SUBMITTED">2. Submitted to Authorities</option>
-                <option value="UNDER_REVIEW">3. Under Review (NCRP / Bank)</option>
-                <option value="ACTION_TAKEN">4. Action Taken / Lien Placed</option>
-                <option value="RESOLVED">5. Resolved / Funds Recovered</option>
-                <option value="REJECTED_CLOSED">6. Rejected / Closed</option>
+                <option value="NOT_SUBMITTED">1. {t("status.NOT_SUBMITTED", "Not Submitted")}</option>
+                <option value="SUBMITTED">2. {t("status.SUBMITTED", "Submitted to Authorities")}</option>
+                <option value="UNDER_REVIEW">3. {t("status.UNDER_REVIEW", "Under Review (NCRP / Bank)")}</option>
+                <option value="ACTION_TAKEN">4. {t("status.ACTION_TAKEN", "Action Taken / Lien Placed")}</option>
+                <option value="RESOLVED">5. {t("status.RESOLVED", "Resolved / Funds Recovered")}</option>
+                <option value="REJECTED_CLOSED">6. {t("status.REJECTED_CLOSED", "Rejected / Closed")}</option>
               </select>
             </div>
 
             {/* Optional Note */}
             <div className="sm:col-span-5">
               <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                Status Change Note (Optional)
+                {t("emer.status_note_label", "Status Change Note (Optional)")}
               </label>
               <input
                 type="text"
@@ -560,7 +561,7 @@ export default function EmergencyResponseDashboardPage() {
                 ) : (
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                 )}
-                Save Status
+                {t("emer.status_save", "Save Status")}
               </Button>
             </div>
           </div>
@@ -583,7 +584,9 @@ export default function EmergencyResponseDashboardPage() {
                 className="text-[#172F4D] hover:underline font-semibold flex items-center gap-1"
               >
                 <History className="w-3.5 h-3.5" />
-                {showStatusHistory ? "Hide Status History" : `View History (${tracking.status_history.length})`}
+                {showStatusHistory
+                  ? "Hide Status History"
+                  : `${t("emer.status_history_btn", "View Status History")} (${tracking.status_history.length})`}
               </button>
             )}
           </div>
@@ -597,7 +600,7 @@ export default function EmergencyResponseDashboardPage() {
                   <div key={idx} className="p-2 rounded-lg bg-white border border-[#DCE7F0] text-xs flex items-start justify-between gap-2">
                     <div>
                       <span className="font-bold text-[#172F4D]">
-                        {STATUS_LABELS[hist.status]?.label || hist.status}
+                        {t(`status.${hist.status}`, STATUS_LABELS[hist.status]?.label || hist.status)}
                       </span>
                       {hist.note && <p className="text-[#71849A] mt-0.5">{hist.note}</p>}
                     </div>
@@ -624,7 +627,7 @@ export default function EmergencyResponseDashboardPage() {
             }`}
           >
             <CheckSquare className="w-4 h-4" />
-            1. Emergency Checklist ({totalCompleted}/{totalItems})
+            {t("emer.tabs_checklist", "1. Emergency Checklist")} ({totalCompleted}/{totalItems})
           </button>
 
           <button
@@ -636,7 +639,7 @@ export default function EmergencyResponseDashboardPage() {
             }`}
           >
             <Clock className="w-4 h-4" />
-            2. Action Timeline ({tracking?.timeline.length || 0})
+            {t("emer.tabs_timeline", "2. Action Timeline")} ({tracking?.timeline.length || 0})
           </button>
 
           <button
@@ -648,7 +651,7 @@ export default function EmergencyResponseDashboardPage() {
             }`}
           >
             <Hash className="w-4 h-4" />
-            3. Reference Numbers
+            {t("emer.tabs_references", "3. Reference Numbers")}
           </button>
 
           <button
@@ -660,7 +663,7 @@ export default function EmergencyResponseDashboardPage() {
             }`}
           >
             <FileText className="w-4 h-4" />
-            4. Follow-up & Notes ({tracking?.follow_up_notes.length || 0})
+            {t("emer.tabs_notes", "4. Follow-up & Notes")} ({tracking?.follow_up_notes.length || 0})
           </button>
 
           <button
@@ -672,7 +675,7 @@ export default function EmergencyResponseDashboardPage() {
             }`}
           >
             <FolderLock className="w-4 h-4" />
-            5. Legal Package / Documents
+            {t("emer.tabs_documents", "5. Legal Package / Documents")}
           </button>
 
           <button
@@ -684,7 +687,7 @@ export default function EmergencyResponseDashboardPage() {
             }`}
           >
             <ExternalLink className="w-4 h-4" />
-            6. Official Links
+            {t("emer.tabs_links", "6. Official Links")}
           </button>
         </nav>
       </div>
@@ -693,7 +696,7 @@ export default function EmergencyResponseDashboardPage() {
       {isLoading ? (
         <div className="p-12 text-center text-[#71849A] space-y-3">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto text-[#172F4D]" />
-          <p className="text-xs">Loading case tracking data...</p>
+          <p className="text-xs">{t("common.loading", "Loading case tracking data...")}</p>
         </div>
       ) : (
         <>
@@ -702,35 +705,41 @@ export default function EmergencyResponseDashboardPage() {
             <div className="space-y-6 animate-fadeIn">
               <StageCard
                 stageNumber="1"
-                title="Within 10 Minutes"
-                subtitle="Immediate containment: Stop payment & freeze alert"
+                title={t("emer.priority1_title", "Priority 1: First 10 Minutes")}
+                subtitle={t("emer.priority1_desc", "Immediate containment: Stop payment & freeze alert")}
                 completedCount={completed10m}
                 totalCount={stage10m.length}
                 items={stage10m}
                 onToggle={handleToggle}
                 updatingItemId={updatingItemId}
+                t={t}
+                formatDateTime={formatDateTime}
               />
 
               <StageCard
                 stageNumber="2"
-                title="Within 1 Hour"
-                subtitle="Formal cybercrime reporting & inter-bank lien requisition"
+                title={t("emer.priority2_title", "Priority 2: Within 1 Hour")}
+                subtitle={t("emer.priority2_desc", "Formal cybercrime reporting & inter-bank lien requisition")}
                 completedCount={completed1h}
                 totalCount={stage1h.length}
                 items={stage1h}
                 onToggle={handleToggle}
                 updatingItemId={updatingItemId}
+                t={t}
+                formatDateTime={formatDateTime}
               />
 
               <StageCard
                 stageNumber="3"
-                title="Within 24 Hours"
-                subtitle="Follow-up, document archival & status monitoring"
+                title={t("emer.priority3_title", "Priority 3: Within 24 Hours")}
+                subtitle={t("emer.priority3_desc", "Follow-up, document archival & status monitoring")}
                 completedCount={completed24h}
                 totalCount={stage24h.length}
                 items={stage24h}
                 onToggle={handleToggle}
                 updatingItemId={updatingItemId}
+                t={t}
+                formatDateTime={formatDateTime}
               />
             </div>
           )}
@@ -741,7 +750,7 @@ export default function EmergencyResponseDashboardPage() {
               <CardHeader className="bg-[#F1F6FB]/80 border-b border-[#DCE7F0] p-4 sm:p-5">
                 <CardTitle className="text-sm sm:text-base font-bold text-[#172F4D] flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#172F4D]" />
-                  Chronological Action Timeline
+                  {t("emer.tabs_timeline", "Chronological Action Timeline")}
                 </CardTitle>
                 <CardDescription className="text-xs text-[#71849A]">
                   Real events automatically logged with timestamps as actions and submissions occur.
@@ -757,7 +766,6 @@ export default function EmergencyResponseDashboardPage() {
                       const isCrimson = ev.badge_variant === "crimson";
                       return (
                         <div key={ev.id} className="relative pl-6 sm:pl-8">
-                          {/* Circle dot on timeline */}
                           <div
                             className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full border-2 bg-white ${
                               isEmerald
@@ -800,10 +808,13 @@ export default function EmergencyResponseDashboardPage() {
               <CardHeader className="bg-[#F1F6FB]/80 border-b border-[#DCE7F0] p-4 sm:p-5">
                 <CardTitle className="text-sm sm:text-base font-bold text-[#172F4D] flex items-center gap-2">
                   <Hash className="w-4 h-4 text-[#172F4D]" />
-                  Official Reference & Token Numbers
+                  {t("emer.ref_title", "Official Reference & Token Numbers")}
                 </CardTitle>
                 <CardDescription className="text-xs text-[#71849A]">
-                  Log your official tokens from the 1930 Cybercrime Portal and Bank Nodal Desk.
+                  {t(
+                    "emer.ref_desc",
+                    "Store official reference numbers. Once entered, GoldenHour automatically updates your case status and verifies checklist steps."
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 sm:p-6 space-y-6">
@@ -812,7 +823,7 @@ export default function EmergencyResponseDashboardPage() {
                   <div>
                     <strong className="block font-bold">Automatic Checklist Verification</strong>
                     <p className="text-[#477DA8] mt-0.5">
-                      Saving your reference numbers automatically checks off "File complaint on Cybercrime Portal" and "Save Acknowledgement Number" in your emergency checklist.
+                      Saving your reference numbers automatically checks off formal filing steps in your emergency checklist.
                     </p>
                   </div>
                 </div>
@@ -821,13 +832,13 @@ export default function EmergencyResponseDashboardPage() {
                   {/* NCRP Token */}
                   <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-3">
                     <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider">
-                      1930 NCRP Cyber Crime Acknowledgement Number
+                      {t("emer.ref_ncrp", "1930 NCRP Cyber Crime Acknowledgement Number")}
                     </label>
                     <input
                       type="text"
                       value={ncrpToken}
                       onChange={(e) => setNcrpToken(e.target.value)}
-                      placeholder="e.g. 2026/089123/NCRP or 1930-TKN-88341"
+                      placeholder={t("emer.ref_ncrp_placeholder", "e.g. 2026/089123/NCRP or 1930-TKN-88341")}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#DCE7F0] text-sm text-[#172F4D] font-mono focus:outline-none focus:border-[#172F4D]"
                     />
                     <label className="flex items-center gap-2 text-xs text-[#172F4D] cursor-pointer">
@@ -837,20 +848,20 @@ export default function EmergencyResponseDashboardPage() {
                         onChange={(e) => setNcrpSubmitted(e.target.checked)}
                         className="rounded border-[#DCE7F0] text-[#172F4D] focus:ring-0"
                       />
-                      <span>Confirmed submitted on National Cyber Crime Reporting Portal (cybercrime.gov.in)</span>
+                      <span>{t("emer.ref_confirm_ncrp", "Confirmed submitted on National Cyber Crime Reporting Portal (cybercrime.gov.in)")}</span>
                     </label>
                   </div>
 
                   {/* Bank SR Number */}
                   <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-3">
                     <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider">
-                      Bank Dispute Service Request (SR) / Reference
+                      {t("emer.ref_bank_sr", "Bank Dispute Service Request (SR) / Reference")}
                     </label>
                     <input
                       type="text"
                       value={bankSr}
                       onChange={(e) => setBankSr(e.target.value)}
-                      placeholder="e.g. AXIS-SR-992144 or HDFC-CC-77812"
+                      placeholder={t("emer.ref_bank_placeholder", "e.g. AXIS-SR-992144 or HDFC-CC-77812")}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#DCE7F0] text-sm text-[#172F4D] font-mono focus:outline-none focus:border-[#172F4D]"
                     />
                     <label className="flex items-center gap-2 text-xs text-[#172F4D] cursor-pointer">
@@ -860,20 +871,20 @@ export default function EmergencyResponseDashboardPage() {
                         onChange={(e) => setBankSubmitted(e.target.checked)}
                         className="rounded border-[#DCE7F0] text-[#172F4D] focus:ring-0"
                       />
-                      <span>Confirmed registered with Bank Nodal Officer / Fraud Desk</span>
+                      <span>{t("emer.ref_confirm_bank", "Confirmed registered with Bank Nodal Officer / Fraud Desk")}</span>
                     </label>
                   </div>
 
                   {/* Police Station Ref */}
                   <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] space-y-3">
                     <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider">
-                      Local Cyber Police Station Reference / GD Entry (Optional)
+                      {t("emer.ref_police", "Local Cyber Police Station Reference / GD Entry (Optional)")}
                     </label>
                     <input
                       type="text"
                       value={policeRef}
                       onChange={(e) => setPoliceRef(e.target.value)}
-                      placeholder="e.g. Cyber PS East Zone / DD No. 42A"
+                      placeholder={t("emer.ref_police_placeholder", "e.g. Cyber PS East Zone / DD No. 42A")}
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#DCE7F0] text-sm text-[#172F4D] font-mono focus:outline-none focus:border-[#172F4D]"
                     />
                   </div>
@@ -884,7 +895,7 @@ export default function EmergencyResponseDashboardPage() {
                     className="bg-[#172F4D] hover:bg-[#263F61] text-white font-bold text-xs px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-sm"
                   >
                     {isSavingRefs ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
-                    Save Reference Numbers
+                    {t("emer.ref_save", "Save Reference Numbers")}
                   </Button>
                 </form>
               </CardContent>
@@ -899,10 +910,10 @@ export default function EmergencyResponseDashboardPage() {
                 <CardHeader className="bg-[#F1F6FB]/80 border-b border-[#DCE7F0] p-4 sm:p-5">
                   <CardTitle className="text-sm sm:text-base font-bold text-[#172F4D] flex items-center gap-2">
                     <Edit3 className="w-4 h-4 text-[#172F4D]" />
-                    Add Follow-up Communication Note
+                    {t("emer.notes_title", "Follow-up Communication Notes")}
                   </CardTitle>
                   <CardDescription className="text-xs text-[#71849A]">
-                    Record calls with 1930 operators, bank branch visits, or police interactions.
+                    {t("emer.notes_desc", "Keep an audit trail of every conversation with bank officers, 1930 helpline operators, or cyber police.")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6 space-y-4">
@@ -910,7 +921,7 @@ export default function EmergencyResponseDashboardPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-[#172F4D] mb-1">
-                          Communication Category
+                          {t("emer.notes_category", "Communication Category")}
                         </label>
                         <select
                           value={noteCategory}
@@ -926,7 +937,7 @@ export default function EmergencyResponseDashboardPage() {
 
                       <div>
                         <label className="block text-xs font-semibold text-[#172F4D] mb-1">
-                          Next Follow-up Date (Optional)
+                          {t("emer.notes_follow_up", "Next Follow-up Date (Optional)")}
                         </label>
                         <input
                           type="date"
@@ -939,14 +950,14 @@ export default function EmergencyResponseDashboardPage() {
 
                     <div>
                       <label className="block text-xs font-semibold text-[#172F4D] mb-1">
-                        Note Details
+                        {t("emer.notes_content", "Note Details")}
                       </label>
                       <textarea
                         rows={3}
                         required
                         value={noteText}
                         onChange={(e) => setNoteText(e.target.value)}
-                        placeholder="e.g. Spoke to Axis Bank dispute manager (Ramesh). They confirmed the freeze request is initiated under RBI 3-day limited liability rule."
+                        placeholder="e.g. Spoke to dispute manager. They confirmed the freeze request is initiated under RBI 3-day limited liability rule."
                         className="w-full px-3.5 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] focus:outline-none focus:border-[#172F4D]"
                       />
                     </div>
@@ -957,7 +968,7 @@ export default function EmergencyResponseDashboardPage() {
                       className="bg-[#172F4D] hover:bg-[#263F61] text-white font-bold text-xs px-5 py-2 rounded-xl flex items-center gap-1.5 shadow-sm"
                     >
                       {isSavingNote ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                      Save Follow-up Note
+                      {t("emer.notes_save", "Save Follow-up Note")}
                     </Button>
                   </form>
                 </CardContent>
@@ -971,7 +982,7 @@ export default function EmergencyResponseDashboardPage() {
 
                 {(!tracking?.follow_up_notes || tracking.follow_up_notes.length === 0) ? (
                   <p className="text-xs text-[#71849A] text-center py-6 bg-white rounded-xl border border-[#DCE7F0]">
-                    No communication notes recorded yet. Use the form above to log your first call or branch visit.
+                    {t("emer.notes_empty", "No follow-up notes recorded yet.")}
                   </p>
                 ) : (
                   tracking.follow_up_notes.map((note) => (
@@ -1008,7 +1019,7 @@ export default function EmergencyResponseDashboardPage() {
                                 onClick={() => handleEditNoteSave(note.id)}
                                 className="bg-[#172F4D] text-white text-xs py-1 px-3"
                               >
-                                Save Changes
+                                {t("common.save", "Save Changes")}
                               </Button>
                               <Button
                                 size="sm"
@@ -1016,7 +1027,7 @@ export default function EmergencyResponseDashboardPage() {
                                 onClick={() => setEditingNoteId(null)}
                                 className="text-xs py-1 px-3"
                               >
-                                Cancel
+                                {t("common.cancel", "Cancel")}
                               </Button>
                             </div>
                           </div>
@@ -1057,7 +1068,6 @@ export default function EmergencyResponseDashboardPage() {
           {/* TAB 5: DOCUMENTS READY */}
           {activeTab === "documents" && (
             <div className="space-y-6 animate-fadeIn">
-              {/* Generation Action Banner */}
               <Card className="border-[#DCE7F0] shadow-sm bg-white overflow-hidden">
                 <CardHeader className="bg-[#E1F1FB]/70 border-b border-[#DCE7F0] p-4 sm:p-5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1067,10 +1077,10 @@ export default function EmergencyResponseDashboardPage() {
                       </div>
                       <div>
                         <CardTitle className="text-sm sm:text-base font-bold text-[#172F4D]">
-                          AI Legal Complaint Package (5 Standard Documents)
+                          {t("emer.docs_title", "Official Complaint Documents Ready")}
                         </CardTitle>
                         <CardDescription className="text-xs text-[#71849A]">
-                          Formatted under Section 66D IT Act & RBI Master Directions for immediate bank lien & police filing.
+                          {t("emer.docs_desc", "Pre-filled, legally structured complaint letters ready for download or copying.")}
                         </CardDescription>
                       </div>
                     </div>
@@ -1083,22 +1093,17 @@ export default function EmergencyResponseDashboardPage() {
                       {isGeneratingDocs ? (
                         <>
                           <RefreshCw className="w-4 h-4 animate-spin" />
-                          Generating Legal Package...
+                          Generating...
                         </>
                       ) : (
                         <>
                           <FolderLock className="w-4 h-4" />
-                          Generate / Refresh Legal Package
+                          Generate / Refresh Documents
                         </>
                       )}
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                  <p className="text-xs text-[#477DA8] leading-relaxed">
-                    Clicking "Generate / Refresh Legal Package" generates standardized legal drafts for your case and automatically marks your document sharing checklist tasks as verified.
-                  </p>
-                </CardContent>
               </Card>
 
               {/* 5 Documents Grid */}
@@ -1106,38 +1111,21 @@ export default function EmergencyResponseDashboardPage() {
                 {[
                   {
                     type: "BANK_FRAUD_COMPLAINT",
-                    title: "1. Bank Fraud Complaint Letter",
-                    desc: "Formal letter to the Principal Nodal Officer disputing the transaction under RBI zero-liability rules.",
-                    stage: "Within 10 Minutes",
-                    sampleContent: `URGENT: DISPUTE & FRAUD COMPLAINT UNDER RBI CUSTOMER PROTECTION GUIDELINES\n\nTo,\nThe Principal Nodal Officer / Fraud Risk Management Team\n${selectedCase?.title || "Issuing Bank"}\n\nSubject: Urgent dispute and lien requisition for fraudulent UPI transfer UTR: ${selectedCase?.transaction_id_utr || "Pending"}\n\nDear Sir/Madam,\nI am writing immediately within the Golden Hour window to report an unauthorized UPI debit of INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}.\n\nAs mandated by RBI Master Direction (RBI/2017-18/15), reporting within 3 working days guarantees zero liability for third-party breaches. Kindly immediately initiate an inter-bank recall and lien marking on the beneficiary account at the receiving bank.\n\nSincerely,\nCitizen Complainant`
-                  },
-                  {
-                    type: "BANK_FREEZE_REQUEST",
-                    title: "2. Beneficiary Account Debit Freeze Requisition",
-                    desc: "Urgent freeze request directed to the beneficiary's receiving bank to lock defrauded funds.",
-                    stage: "Within 10 Minutes",
-                    sampleContent: `EMERGENCY REQUISITION: IMMEDIATE DEBIT FREEZE ON FRAUDULENT BENEFICIARY ACCOUNT\n\nTo,\nThe Fraud Monitoring Cell & Nodal Officer\nBeneficiary Bank: ${selectedCase?.beneficiary_upi_id ? selectedCase.beneficiary_upi_id.split("@")[1]?.toUpperCase() : "Receiving Bank"}\n\nTransaction Reference (UTR): ${selectedCase?.transaction_id_utr || "Pending"}\nBeneficiary VPA: ${selectedCase?.beneficiary_upi_id || "Reported Beneficiary"}\nAmount Defrauded: INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}\n\nTake notice that the above transaction constitutes cyber fraud under Section 66D IT Act. Under Section 102 CrPC / BNSS, kindly place an immediate debit freeze / lien on the beneficiary wallet/account.`
+                    title: t("emer.doc_bank_letter", "Bank Fraud Dispute & Lien Request Letter"),
+                    desc: "Formal letter disputing transaction under RBI zero-liability rules.",
+                    sampleContent: `URGENT: DISPUTE & FRAUD COMPLAINT UNDER RBI CUSTOMER PROTECTION GUIDELINES\n\nTo,\nThe Principal Nodal Officer / Fraud Risk Management Team\n${selectedCase?.title || "Issuing Bank"}\n\nSubject: Urgent dispute and lien requisition for fraudulent UPI transfer UTR: ${selectedCase?.transaction_id_utr || "Pending"}\n\nDear Sir/Madam,\nI am writing immediately within the Golden Hour window to report an unauthorized UPI debit of INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}.\n\nKindly immediately initiate an inter-bank recall and lien marking on the beneficiary account at the receiving bank.\n\nSincerely,\nCitizen Complainant`
                   },
                   {
                     type: "HELPLINE_1930_SCRIPT",
-                    title: "3. 1930 Cyber Helpline Citizen Call Script",
-                    desc: "Step-by-step phone speaking script ensuring you provide all technical parameters to the 1930 police officer without panic.",
-                    stage: "Within 10 Minutes",
-                    sampleContent: `1930 HELPLINE CALL SCRIPT - SPEAK CLEARLY:\n\n1. State: "Hello Officer, I have been defrauded in an unauthorized UPI transaction within the last hour. I need immediate lien marking on the beneficiary wallet."\n2. When asked for details:\n   - My 12-Digit UTR is: ${selectedCase?.transaction_id_utr || "[Provide 12-digit UTR]"}\n   - Beneficiary UPI ID is: ${selectedCase?.beneficiary_upi_id || "[Provide beneficiary VPA]"}\n   - Amount Defrauded: INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}\n   - Incident Time: Just occurred within the Golden Hour\n3. Request: "Kindly log this in the Citizen Financial Cyber Fraud Reporting System (CFCFRS) and provide my NCRP Acknowledgement Token."`
+                    title: t("emer.doc_1930_script", "1930 Helpline Call Script"),
+                    desc: "Step-by-step phone speaking script ensuring you provide all technical parameters without panic.",
+                    sampleContent: `1930 HELPLINE CALL SCRIPT - SPEAK CLEARLY:\n\n1. State: "Hello Officer, I have been defrauded in an unauthorized UPI transaction within the last hour. I need immediate lien marking on the beneficiary wallet."\n2. When asked for details:\n   - My 12-Digit UTR is: ${selectedCase?.transaction_id_utr || "[Provide 12-digit UTR]"}\n   - Beneficiary UPI ID is: ${selectedCase?.beneficiary_upi_id || "[Provide beneficiary VPA]"}\n   - Amount Defrauded: INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}\n3. Request: "Kindly log this in the Citizen Financial Cyber Fraud Reporting System (CFCFRS) and provide my NCRP Acknowledgement Token."`
                   },
                   {
                     type: "CYBERCRIME_PORTAL_DRAFT",
-                    title: "4. National Cyber Crime Portal (NCRP) Draft",
-                    desc: "Structured complaint narrative formatted for cybercrime.gov.in with exact legal and transactional fields.",
-                    stage: "Within 1 Hour",
-                    sampleContent: `FORMAL COMPLAINT DRAFT FOR CYBERCRIME.GOV.IN:\n\nCategory: Financial Fraud / UPI Fraud\nSub-Category: Unauthorized Debit / Phishing\n\n1. TRANSACTION DETAILS:\n- UTR: ${selectedCase?.transaction_id_utr || "Pending"}\n- Beneficiary UPI ID: ${selectedCase?.beneficiary_upi_id || "Pending"}\n- Amount: INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}\n\n2. STATEMENT OF COMPLAINT:\nThe complainant was targeted by cyber fraudsters who initiated an unauthorized debit without consent. Complainant has already contacted helpline 1930 and bank nodal officer. Complainant prays for immediate fund recovery and registration of formal cyber FIR.`
-                  },
-                  {
-                    type: "EVIDENCE_SUMMARY",
-                    title: "5. Evidentiary Summary & Digital Timeline Report",
-                    desc: "Comprehensive evidentiary dossier summarizing timestamps, OCR matches, and screenshot hashes for police investigation.",
-                    stage: "Within 24 Hours",
-                    sampleContent: `GOLDENHOUR DIGITAL FORENSIC EVIDENCE DOSSIER\n\nCase Number: ${selectedCase?.case_number || "GH-CASE"}\nGenerated: ${new Date().toISOString()}\n\n1. CHAIN OF CUSTODY:\n- Total Evidence Files: ${selectedCase?.evidence_count || 1}\n- Zero Credential Compliance: Verified (No PIN, OTP or CVV stored)\n- UTR Verification Status: ${selectedCase?.transaction_id_utr ? "Matched via Native OCR" : "Pending Manual Verification"}\n\n2. FORENSIC RECORD:\n- Registered Amount: INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}\n- Beneficiary Account VPA: ${selectedCase?.beneficiary_upi_id || "N/A"}\n- Preserved under Section 65B Indian Evidence Act / BSA.`
+                    title: t("emer.doc_cyber_cell", "Cyber Crime Police Formal Complaint"),
+                    desc: "Structured complaint narrative formatted for cybercrime.gov.in.",
+                    sampleContent: `FORMAL COMPLAINT DRAFT FOR CYBERCRIME.GOV.IN:\n\nCategory: Financial Fraud / UPI Fraud\nSub-Category: Unauthorized Debit\n\n1. TRANSACTION DETAILS:\n- UTR: ${selectedCase?.transaction_id_utr || "Pending"}\n- Beneficiary UPI ID: ${selectedCase?.beneficiary_upi_id || "Pending"}\n- Amount: INR ${selectedCase?.amount_lost?.toLocaleString() || "0.00"}\n\n2. STATEMENT OF COMPLAINT:\nThe complainant was targeted by cyber fraudsters who initiated an unauthorized debit without consent. Complainant prays for immediate fund recovery and registration of formal cyber FIR.`
                   }
                 ].map((doc) => (
                   <Card key={doc.type} className="border-[#DCE7F0] shadow-sm bg-white flex flex-col justify-between">
@@ -1153,9 +1141,6 @@ export default function EmergencyResponseDashboardPage() {
                       <CardDescription className="text-xs text-[#71849A] mt-1">
                         {doc.desc}
                       </CardDescription>
-                      <span className="text-[10px] text-[#477DA8] font-medium block mt-1">
-                        Recommended: {doc.stage}
-                      </span>
                     </CardHeader>
                     <CardContent className="p-4 pt-3 flex items-center justify-between gap-2">
                       <Button
@@ -1165,7 +1150,7 @@ export default function EmergencyResponseDashboardPage() {
                         className="text-xs border-[#DCE7F0] text-[#172F4D] hover:bg-[#F1F6FB] flex items-center gap-1.5"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        Preview
+                        {t("emer.doc_preview", "Preview")}
                       </Button>
                       <Button
                         size="sm"
@@ -1173,7 +1158,7 @@ export default function EmergencyResponseDashboardPage() {
                         className="bg-[#172F4D] text-white hover:bg-[#263F61] text-xs flex items-center gap-1.5 shadow-sm"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        Download (.txt)
+                        {t("emer.doc_download", "Download")}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1188,10 +1173,10 @@ export default function EmergencyResponseDashboardPage() {
               <CardHeader className="bg-[#F1F6FB]/80 border-b border-[#DCE7F0] p-4 sm:p-5">
                 <CardTitle className="text-sm sm:text-base font-bold text-[#172F4D] flex items-center gap-2">
                   <ExternalLink className="w-4 h-4 text-[#172F4D]" />
-                  Verified Cybercrime & Bank Emergency Desks
+                  {t("emer.links_title", "Official Government & Banking Portals")}
                 </CardTitle>
                 <CardDescription className="text-xs text-[#71849A]">
-                  Official government portals and scheduled commercial bank fraud reporting contact links.
+                  {t("emer.links_desc", "Direct links to verified reporting portals and regulatory bodies.")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 sm:p-6 space-y-4">
@@ -1201,7 +1186,7 @@ export default function EmergencyResponseDashboardPage() {
                       name: "National Cyber Crime Reporting Portal (NCRP)",
                       url: "https://cybercrime.gov.in",
                       category: "GOVERNMENT",
-                      description: "Official Ministry of Home Affairs citizen portal for reporting financial cyber fraud and tracking status.",
+                      description: "Official Ministry of Home Affairs citizen portal for reporting financial cyber fraud.",
                       verified: true,
                       helpline_number: "1930",
                       badge_text: "Official Government Portal"
@@ -1232,24 +1217,6 @@ export default function EmergencyResponseDashboardPage() {
                       verified: true,
                       helpline_number: "18002583838",
                       badge_text: "Verified Bank Desk"
-                    },
-                    {
-                      name: "ICICI Bank Cyber Defense Desk",
-                      url: "https://www.icicibank.com",
-                      category: "BANK",
-                      description: "ICICI Bank emergency helpline for instant debit freeze.",
-                      verified: true,
-                      helpline_number: "18002663499",
-                      badge_text: "Verified Bank Desk"
-                    },
-                    {
-                      name: "Axis Bank Emergency Nodal Officer",
-                      url: "https://www.axisbank.com",
-                      category: "BANK",
-                      description: "Axis Bank fraud response and beneficiary lien request portal.",
-                      verified: true,
-                      helpline_number: "18004190068",
-                      badge_text: "Verified Bank Desk"
                     }
                   ]).map((link, idx) => (
                     <div key={idx} className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] flex flex-col justify-between space-y-3">
@@ -1277,7 +1244,7 @@ export default function EmergencyResponseDashboardPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] font-semibold text-xs py-2 px-3 rounded-xl transition-colors shadow-2xs"
                       >
-                        Visit Official Portal
+                        {t("emer.links_open", "Open Portal")}
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     </div>
@@ -1321,7 +1288,7 @@ export default function EmergencyResponseDashboardPage() {
                 className="text-xs flex items-center gap-1.5"
               >
                 {copiedDoc ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                {copiedDoc ? "Copied to Clipboard!" : "Copy Full Text"}
+                {copiedDoc ? t("common.copied", "Copied to Clipboard!") : t("common.copy", "Copy Text")}
               </Button>
 
               <div className="flex items-center gap-2">
@@ -1331,7 +1298,7 @@ export default function EmergencyResponseDashboardPage() {
                   className="bg-[#172F4D] text-white hover:bg-[#263F61] text-xs flex items-center gap-1.5"
                 >
                   <Download className="w-4 h-4" />
-                  Download
+                  {t("common.download", "Download")}
                 </Button>
                 <Button
                   variant="outline"
@@ -1339,7 +1306,7 @@ export default function EmergencyResponseDashboardPage() {
                   onClick={() => setPreviewDoc(null)}
                   className="text-xs"
                 >
-                  Close
+                  {t("common.close", "Close")}
                 </Button>
               </div>
             </div>
@@ -1360,6 +1327,8 @@ function StageCard({
   items,
   onToggle,
   updatingItemId,
+  t,
+  formatDateTime
 }: {
   stageNumber: string;
   title: string;
@@ -1369,6 +1338,8 @@ function StageCard({
   items: EmergencyChecklistItem[];
   onToggle: (itemId: string, currentState: boolean) => void;
   updatingItemId: string | null;
+  t: (key: string, defaultText?: string) => string;
+  formatDateTime: (dateString: string | null | undefined) => string;
 }) {
   const isAllDone = totalCount > 0 && completedCount === totalCount;
 
@@ -1382,7 +1353,7 @@ function StageCard({
             </div>
             <div>
               <CardTitle className="text-sm sm:text-base font-bold text-[#172F4D]">
-                Stage {stageNumber}: {title}
+                {title}
               </CardTitle>
               <CardDescription className="text-xs text-[#71849A]">
                 {subtitle}
@@ -1398,7 +1369,7 @@ function StageCard({
                 : "bg-white text-[#172F4D] border-[#DCE7F0]"
             }`}
           >
-            {completedCount}/{totalCount} completed
+            {completedCount}/{totalCount} {t("common.completed", "completed")}
           </Badge>
         </div>
       </CardHeader>

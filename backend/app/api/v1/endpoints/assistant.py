@@ -4,7 +4,9 @@ from app.schemas.common import ApiResponse
 from app.schemas.assistant import (
     ChatRequest,
     ChatResponse,
-    AssistantLanguage
+    AssistantLanguage,
+    TranslateHistoryRequest,
+    TranslateHistoryResponse
 )
 from app.services.assistant_service import assistant_service
 from app.services.auth_service import auth_service
@@ -28,8 +30,8 @@ def send_assistant_message(
     Main conversational endpoint for GoldenHour AI Emergency Assistant.
     Supports English, Telugu (తెలుగు), and Hindi (हिंदी).
     Features:
-    - 1930 Helpline guidance
-    - cybercrime.gov.in official portal instructions
+    - Context-aware intent parsing (greetings, fraud triage, follow-up resolutions)
+    - 1930 Helpline guidance & cybercrime.gov.in official SOPs
     - Evidence preservation checklist
     - Bank dispute vs. account freeze distinctions
     - Senior citizen step-by-step guidance
@@ -47,33 +49,50 @@ def send_assistant_message(
     )
 
 
+@router.post("/translate-history", response_model=ApiResponse[TranslateHistoryResponse])
+def translate_assistant_history(req: TranslateHistoryRequest):
+    """
+    Translates an entire visible conversation history into English, Telugu, or Hindi
+    while strictly preserving transaction IDs, UPI VPAs, phone numbers, amounts, and timestamps.
+    """
+    translated = assistant_service.translate_history(req.messages, req.target_language)
+    return ApiResponse(
+        success=True,
+        message="Conversation history translated.",
+        data=TranslateHistoryResponse(
+            translated_messages=translated,
+            target_language=req.target_language
+        )
+    )
+
+
 @router.get("/topics", response_model=ApiResponse[Dict[str, List[Dict[str, str]]]])
 def get_assistant_topics():
-    """Returns quick inquiry prompt chips across English, Telugu, and Hindi."""
+    """Returns dynamic inquiry prompt chips matching user requirements across English, Telugu, and Hindi."""
     topics = {
         "en": [
-            {"id": "1930", "label": "How do I call the 1930 helpline?", "topic": "HELPLINE_1930"},
-            {"id": "portal", "label": "How to file on cybercrime.gov.in?", "topic": "CYBERCRIME_PORTAL"},
-            {"id": "evidence", "label": "What evidence should I save?", "topic": "EVIDENCE_PRESERVATION"},
-            {"id": "freeze", "label": "Difference between reporting & freezing account?", "topic": "BANK_DISPUTE_VS_FREEZE"},
-            {"id": "senior", "label": "Senior citizen step-by-step guidance", "topic": "SENIOR_CITIZEN_GUIDANCE"},
-            {"id": "rbi", "label": "What are the RBI Zero Liability rules?", "topic": "RBI_ZERO_LIABILITY"}
+            {"id": "call_1930", "label": "How do I call 1930?", "topic": "HELPLINE_1930"},
+            {"id": "report_upi", "label": "How do I report UPI fraud?", "topic": "CYBERCRIME_PORTAL"},
+            {"id": "save_evidence", "label": "What evidence should I save?", "topic": "EVIDENCE_PRESERVATION"},
+            {"id": "contact_bank", "label": "How do I contact my bank?", "topic": "BANK_DISPUTE_VS_FREEZE"},
+            {"id": "money_recovery", "label": "Can my money be recovered?", "topic": "RBI_ZERO_LIABILITY"},
+            {"id": "fake_qr", "label": "What should I do after a fake QR scam?", "topic": "FAKE_QR_SCAM"}
         ],
         "te": [
-            {"id": "1930", "label": "1930 సైబర్ హెల్ప్‌లైన్‌కు ఎలా కాల్ చేయాలి?", "topic": "HELPLINE_1930"},
-            {"id": "portal", "label": "సైబర్ పోర్టల్‌లో ఫిర్యాదు ఎలా చేయాలి?", "topic": "CYBERCRIME_PORTAL"},
-            {"id": "evidence", "label": "ఏ ఆధారాలు భద్రపరచాలి?", "topic": "EVIDENCE_PRESERVATION"},
-            {"id": "freeze", "label": "ఫిర్యాదు మరియు ఖాతా ఫ్రీజ్ మధ్య తేడా ఏమిటి?", "topic": "BANK_DISPUTE_VS_FREEZE"},
-            {"id": "senior", "label": "సీనియర్ సిటిజన్ సులభ రక్షణ మార్గదర్శి", "topic": "SENIOR_CITIZEN_GUIDANCE"},
-            {"id": "rbi", "label": "RBI జీరో లయబిలిటీ నియమాలు ఏమిటి?", "topic": "RBI_ZERO_LIABILITY"}
+            {"id": "call_1930", "label": "1930 నంబర్కు ఎలా కాల్ చేయాలి?", "topic": "HELPLINE_1930"},
+            {"id": "report_upi", "label": "UPI మోసాన్ని ఎలా ఫిర్యాదు చేయాలి?", "topic": "CYBERCRIME_PORTAL"},
+            {"id": "save_evidence", "label": "నేను ఏ ఆధారాలను భద్రపరచాలి?", "topic": "EVIDENCE_PRESERVATION"},
+            {"id": "contact_bank", "label": "నా బ్యాంకును ఎలా సంప్రదించాలి?", "topic": "BANK_DISPUTE_VS_FREEZE"},
+            {"id": "money_recovery", "label": "నా డబ్బు తిరిగి వస్తుందా?", "topic": "RBI_ZERO_LIABILITY"},
+            {"id": "fake_qr", "label": "నకిలీ QR కోడ్ మోసం తర్వాత ఏమి చేయాలి?", "topic": "FAKE_QR_SCAM"}
         ],
         "hi": [
-            {"id": "1930", "label": "1930 साइबर हेल्पलाइन पर कॉल कैसे करें?", "topic": "HELPLINE_1930"},
-            {"id": "portal", "label": "cybercrime.gov.in पोर्टल पर शिकायत कैसे दर्ज करें?", "topic": "CYBERCRIME_PORTAL"},
-            {"id": "evidence", "label": "धोखाधड़ी में कौन से सबूत सुरक्षित रखने चाहिए?", "topic": "EVIDENCE_PRESERVATION"},
-            {"id": "freeze", "label": "रिपोर्टिंग और बैंक अकाउंट फ्रीज में क्या अंतर है?", "topic": "BANK_DISPUTE_VS_FREEZE"},
-            {"id": "senior", "label": "वरिष्ठ नागरिकों के लिए आसान कदम", "topic": "SENIOR_CITIZEN_GUIDANCE"},
-            {"id": "rbi", "label": "RBI के जीरो लायबिलिटी नियम क्या हैं?", "topic": "RBI_ZERO_LIABILITY"}
+            {"id": "call_1930", "label": "1930 पर कैसे कॉल करें?", "topic": "HELPLINE_1930"},
+            {"id": "report_upi", "label": "UPI धोखाधड़ी की शिकायत कैसे करें?", "topic": "CYBERCRIME_PORTAL"},
+            {"id": "save_evidence", "label": "कौन से सबूत सुरक्षित रखने चाहिए?", "topic": "EVIDENCE_PRESERVATION"},
+            {"id": "contact_bank", "label": "बैंक से कैसे संपर्क करें?", "topic": "BANK_DISPUTE_VS_FREEZE"},
+            {"id": "money_recovery", "label": "क्या मेरा पैसा वापस मिल सकता है?", "topic": "RBI_ZERO_LIABILITY"},
+            {"id": "fake_qr", "label": "फर्जी QR कोड धोखाधड़ी के बाद क्या करें?", "topic": "FAKE_QR_SCAM"}
         ]
     }
     return ApiResponse(

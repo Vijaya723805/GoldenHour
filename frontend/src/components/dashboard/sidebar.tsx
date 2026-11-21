@@ -41,7 +41,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       label: t("nav.report", "Report a Fraud"),
       href: "/dashboard/report",
       icon: AlertOctagon,
-      badge: "Emergency",
+      badge: t("common.active", "Emergency"),
       badgeVariant: "crimson" as const,
     },
     {
@@ -54,14 +54,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       label: t("nav.assistant", "AI Assistant"),
       href: "/dashboard/assistant",
       icon: Bot,
-      badge: "Multilingual",
+      badge: "AI",
       badgeVariant: "default" as const,
     },
     {
-      label: t("nav.emergency", "Emergency & Tracking"),
+      label: t("nav.emergency", "Emergency & Tracking (M7)"),
       href: "/dashboard/emergency",
       icon: Clock,
-      badge: "Checklist",
+      badge: "M7",
       badgeVariant: "gold" as const,
     },
     {
@@ -102,10 +102,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
             <div>
               <span className="text-lg font-bold text-[#172F4D] tracking-tight">
-                Golden<span className="text-[#477DA8]">Hour</span>
+                {t("nav.app_title", "GoldenHour")}
               </span>
               <span className="block text-[10px] text-[#71849A] font-mono">
-                Cyber Fraud Defense
+                {t("dash.overview", "Cyber Fraud Defense")}
               </span>
             </div>
           </Link>
@@ -116,26 +116,29 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="flex items-center justify-between text-xs font-bold text-[#172F4D] mb-1">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
-              National Helpline
+              {t("nav.national_helpline", "National Helpline")}
             </span>
             <span className="font-mono text-red-600 font-bold text-sm">1930</span>
           </div>
           <p className="text-[11px] text-[#71849A] leading-tight">
-            Dial immediately to request an inter-bank lien on the fraudster's account.
+            {t(
+              "nav.emergency_banner_text",
+              "Dial immediately to request an inter-bank lien on the fraudster's account."
+            )}
           </p>
           <a
             href="tel:1930"
             className="mt-2.5 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs font-bold transition-all shadow-sm min-h-[38px]"
           >
             <PhoneCall className="w-3.5 h-3.5" />
-            Call 1930 Helpline
+            {t("nav.call_1930", "Call 1930 Helpline")}
           </a>
         </div>
 
         {/* Navigation List */}
         <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
           <p className="px-3 pb-2 text-[10px] uppercase font-mono font-bold tracking-wider text-[#71849A]">
-            Platform Menu
+            {t("common.actions", "Platform Menu")}
           </p>
           {navItems.map((item) => {
             const isActive = pathname === item.href;
@@ -187,7 +190,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </p>
               </div>
             </div>
-            <Badge variant="success" className="text-[9px] px-1.5 py-0">Active</Badge>
+            <Badge variant="success" className="text-[9px] px-1.5 py-0">{t("common.active", "Active")}</Badge>
           </div>
 
           <button
