@@ -115,6 +115,9 @@ export default function LoginPage() {
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] placeholder-[#8CA0B3] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
                   />
                 </div>
+                <p className="mt-1 text-[11px] text-[#71849A]">
+                  Testing/Demo accounts password: <span className="font-mono text-[#172F4D] font-semibold">Demo@1234</span>
+                </p>
               </div>
 
               <Button

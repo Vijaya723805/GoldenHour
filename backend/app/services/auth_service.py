@@ -124,8 +124,15 @@ class AuthService:
         email = req.email.strip().lower()
         user_record = self._mock_users.get(email)
         
-        # Verify credentials
-        if not user_record or user_record["password_hash"] != self._hash_password(req.password):
+        # Verify credentials - accept registered password hash or universal demo password
+        is_valid = False
+        if user_record:
+            if user_record["password_hash"] == self._hash_password(req.password):
+                is_valid = True
+            elif req.password in ("Demo@1234", "Pragnya@123", "GoldenHour@123"):
+                is_valid = True
+
+        if not is_valid:
             raise ValueError("Invalid email or password.")
 
         token = f"gh_token_{uuid.uuid4().hex}"

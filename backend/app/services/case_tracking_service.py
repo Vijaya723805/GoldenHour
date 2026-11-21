@@ -1,10 +1,14 @@
 import uuid
+import json
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 
 from app.schemas.case_tracking import (
     ActionStage,
     TrackingStatus,
+    ComplaintStatus,
+    StatusHistoryItem,
     EmergencyChecklistItem,
     TimelineEvent,
     FollowUpNote,
@@ -15,6 +19,10 @@ from app.schemas.case_tracking import (
     EmergencyDashboardData
 )
 from app.services.dashboard_service import dashboard_service
+
+TRACKING_STORE_FILE = Path(__file__).resolve().parent.parent.parent / "uploads" / "tracking_store.json"
+
+
 
 
 DEFAULT_OFFICIAL_LINKS = [
@@ -93,6 +101,7 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
             title="Contact the national cybercrime helpline at 1930.",
             description="Immediately call 1930 to initiate the Citizen Financial Cyber Fraud Reporting System (CFCFRS) alert across banking channels.",
             is_completed=False,
+            is_auto_completable=False,
             action_url="tel:1930",
             action_label="Call 1930 Helpline",
             category="NATIONAL_HELPLINE"
@@ -100,9 +109,10 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
         EmergencyChecklistItem(
             id="chk_10m_bank",
             stage=ActionStage.WITHIN_10_MINUTES,
-            title="Inform the bank through its official channels.",
+            title="Inform the bank through official channels.",
             description="Call your bank's toll-free fraud helpline or send emergency debit freeze SMS to request an immediate stop-payment or lien flag.",
             is_completed=False,
+            is_auto_completable=False,
             action_url="/dashboard/emergency",
             action_label="View Bank Numbers",
             category="BANK_ALERT"
@@ -112,8 +122,8 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
             stage=ActionStage.WITHIN_10_MINUTES,
             title="Preserve transaction receipts and communication evidence.",
             description="Take high-resolution screenshots of the debit notification, UPI app screen showing 12-digit UTR, SMS alerts, and chat logs.",
-            is_completed=True,  # Initially true if case has evidence attached
-            completed_at=datetime.now() - timedelta(minutes=30),
+            is_completed=False,
+            is_auto_completable=True,
             action_url="/dashboard/report",
             action_label="Evidence Vault",
             category="EVIDENCE_PRESERVATION"
@@ -124,6 +134,7 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
             title="Follow official instructions.",
             description="Follow guidance from the 1930 operator or your bank branch nodal manager; never share UPI PIN, OTP, or passwords with anyone.",
             is_completed=False,
+            is_auto_completable=False,
             action_url="/dashboard/assistant",
             action_label="AI Emergency Guide",
             category="COMPLIANCE"
@@ -133,9 +144,10 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
         EmergencyChecklistItem(
             id="chk_1h_process",
             stage=ActionStage.WITHIN_1_HOUR,
-            title="Complete the required financial cybercrime reporting process.",
+            title="Complete the financial cybercrime reporting process.",
             description="Furnish required transaction details (12-digit UTR, debit timestamp, sender account, scammer VPA) to complete initial triage.",
             is_completed=False,
+            is_auto_completable=False,
             action_url=f"/dashboard/cases/{case_id}/verification",
             action_label="Verify UTR Parameters",
             category="FINANCIAL_REPORTING"
@@ -143,9 +155,10 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
         EmergencyChecklistItem(
             id="chk_1h_portal",
             stage=ActionStage.WITHIN_1_HOUR,
-            title="Submit a complaint through the official cybercrime portal where appropriate.",
+            title="Submit a complaint through the official cybercrime portal.",
             description="Access cybercrime.gov.in to formally log the cyber incident using your GoldenHour generated Cybercrime Dossier.",
             is_completed=False,
+            is_auto_completable=True,
             action_url="https://cybercrime.gov.in/",
             action_label="Open cybercrime.gov.in",
             category="OFFICIAL_PORTAL"
@@ -156,6 +169,7 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
             title="Share evidence with the bank.",
             description="Email the generated formal Bank Dispute Letter & Freeze Requisition along with receipt screenshots to your bank fraud desk.",
             is_completed=False,
+            is_auto_completable=True,
             action_url=f"/dashboard/cases/{case_id}/complaints",
             action_label="Download Bank Letter",
             category="BANK_COMMUNICATION"
@@ -163,9 +177,10 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
         EmergencyChecklistItem(
             id="chk_1h_save_ref",
             stage=ActionStage.WITHIN_1_HOUR,
-            title="Save acknowledgement and reference numbers.",
+            title="Save complaint acknowledgement details.",
             description="Record your 1930 NCRP Acknowledgement Token and Bank Dispute Service Request (SR) number in the Case Tracker.",
             is_completed=False,
+            is_auto_completable=True,
             action_url="#ref-numbers-card",
             action_label="Add Reference Numbers",
             category="RECORD_KEEPING"
@@ -178,6 +193,7 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
             title="Follow up with the bank.",
             description="Contact your home branch or nodal officer with your dispute SR number to verify if an inter-bank lien requisition was served.",
             is_completed=False,
+            is_auto_completable=False,
             action_url="/dashboard/emergency",
             action_label="Bank Contacts Directory",
             category="BANK_FOLLOWUP"
@@ -185,9 +201,10 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
         EmergencyChecklistItem(
             id="chk_24h_ack_details",
             stage=ActionStage.WITHIN_24_HOURS,
-            title="Keep complaint acknowledgement details.",
+            title="Keep acknowledgement details safely.",
             description="Preserve digital and printed copies of all acknowledgement receipts, reference tokens, and email delivery timestamps.",
             is_completed=False,
+            is_auto_completable=True,
             action_url=f"/dashboard/cases/{case_id}/complaints",
             action_label="Export All Documents",
             category="DOCUMENT_ARCHIVE"
@@ -195,9 +212,10 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
         EmergencyChecklistItem(
             id="chk_24h_status_check",
             stage=ActionStage.WITHIN_24_HOURS,
-            title="Check complaint status through official channels.",
+            title="Check complaint status.",
             description="Visit cybercrime.gov.in -> 'Check Status' using your NCRP token. Never entertain third-party callers claiming fund recovery.",
             is_completed=False,
+            is_auto_completable=False,
             action_url="https://cybercrime.gov.in/",
             action_label="Check Portal Status",
             category="STATUS_TRACKING"
@@ -205,9 +223,10 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
         EmergencyChecklistItem(
             id="chk_24h_preserve_extra",
             stage=ActionStage.WITHIN_24_HOURS,
-            title="Preserve all additional evidence.",
+            title="Preserve additional evidence.",
             description="Archive your updated bank account statement showing the debit entry, call recording files, and SMS audit trails.",
             is_completed=False,
+            is_auto_completable=True,
             action_url="/dashboard/report",
             action_label="Upload Additional Vault Files",
             category="EVIDENCE_PRESERVATION"
@@ -215,10 +234,51 @@ def create_default_checklist(case_id: str) -> List[EmergencyChecklistItem]:
     ]
 
 
+
 class CaseTrackingService:
     def __init__(self):
         self._tracking_store: Dict[str, CaseTrackingDetail] = {}
         self._seed_demo_tracking()
+        self._load_from_disk()
+
+    def _save_to_disk(self):
+        try:
+            TRACKING_STORE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            data = {}
+            for cid, detail in self._tracking_store.items():
+                data[cid] = detail.dict() if hasattr(detail, "dict") else detail.model_dump()
+            with open(TRACKING_STORE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f, default=str, indent=2)
+        except Exception as e:
+            print(f"[CaseTrackingService] Could not persist tracking: {e}")
+
+    def _load_from_disk(self):
+        try:
+            if TRACKING_STORE_FILE.exists():
+                with open(TRACKING_STORE_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for cid, detail_data in data.items():
+                    for dt_field in ["created_at", "updated_at", "submission_confirmed_at", "complaint_status_updated_at"]:
+                        if isinstance(detail_data.get(dt_field), str):
+                            detail_data[dt_field] = datetime.fromisoformat(detail_data[dt_field])
+                    for item in detail_data.get("checklist_items", []):
+                        if isinstance(item.get("completed_at"), str):
+                            item["completed_at"] = datetime.fromisoformat(item["completed_at"])
+                    for event in detail_data.get("timeline", []):
+                        if isinstance(event.get("timestamp"), str):
+                            event["timestamp"] = datetime.fromisoformat(event["timestamp"])
+                    for note in detail_data.get("follow_up_notes", []):
+                        if isinstance(note.get("created_at"), str):
+                            note["created_at"] = datetime.fromisoformat(note["created_at"])
+                        if isinstance(note.get("updated_at"), str):
+                            note["updated_at"] = datetime.fromisoformat(note["updated_at"])
+                    for hist in detail_data.get("status_history", []):
+                        if isinstance(hist.get("updated_at"), str):
+                            hist["updated_at"] = datetime.fromisoformat(hist["updated_at"])
+                    self._tracking_store[cid] = CaseTrackingDetail(**detail_data)
+        except Exception as e:
+            print(f"[CaseTrackingService] Could not load tracking store: {e}")
+
 
     def _seed_demo_tracking(self):
         """Pre-populates realistic tracking history for demo cases."""
@@ -544,6 +604,7 @@ class CaseTrackingService:
         )
 
         self._tracking_store[case_id] = new_tracking
+        self._save_to_disk()
         return new_tracking
 
     def get_case_tracking(self, case_id: str, victim_id: str) -> CaseTrackingDetail:
@@ -629,6 +690,13 @@ class CaseTrackingService:
 
         if updated_items:
             tracking.submission_confirmed_at = now
+            # Automatically tick Stage 2 portal and reference checklist tasks
+            for it in tracking.checklist_items:
+                if it.id in ["chk_1h_portal", "chk_1h_save_ref"]:
+                    it.is_completed = True
+                    it.completed_at = now
+                    it.completion_source = "AUTOMATIC"
+
             tracking.timeline.insert(
                 0,
                 TimelineEvent(
@@ -643,6 +711,7 @@ class CaseTrackingService:
 
         tracking.updated_at = now
         tracking.important_next_actions = self._compute_next_actions(tracking)
+        self._save_to_disk()
         return tracking
 
     def update_tracking_status(
@@ -689,6 +758,7 @@ class CaseTrackingService:
             )
 
         tracking.important_next_actions = self._compute_next_actions(tracking)
+        self._save_to_disk()
         return tracking
 
     def add_follow_up_note(
@@ -696,7 +766,8 @@ class CaseTrackingService:
         case_id: str,
         victim_id: str,
         note_text: str,
-        category: str = "General Follow-up"
+        category: str = "General Follow-up",
+        follow_up_date: Optional[str] = None
     ) -> CaseTrackingDetail:
         tracking = self.get_case_tracking(case_id, victim_id)
         now = datetime.now()
@@ -706,6 +777,7 @@ class CaseTrackingService:
             note_text=note_text.strip(),
             author="Citizen Complainant",
             category=category,
+            follow_up_date=follow_up_date,
             created_at=now
         )
         tracking.follow_up_notes.insert(0, new_note)
@@ -722,8 +794,157 @@ class CaseTrackingService:
                 badge_variant="default"
             )
         )
-
+        self._save_to_disk()
         return tracking
+
+    def edit_follow_up_note(
+        self,
+        case_id: str,
+        victim_id: str,
+        note_id: str,
+        new_text: str,
+        category: Optional[str] = None,
+        follow_up_date: Optional[str] = None
+    ) -> CaseTrackingDetail:
+        tracking = self.get_case_tracking(case_id, victim_id)
+        now = datetime.now()
+
+        target_note = None
+        for n in tracking.follow_up_notes:
+            if n.id == note_id:
+                target_note = n
+                n.note_text = new_text.strip()
+                if category:
+                    n.category = category
+                if follow_up_date is not None:
+                    n.follow_up_date = follow_up_date
+                n.updated_at = now
+                break
+
+        if not target_note:
+            raise ValueError(f"Follow-up note '{note_id}' not found.")
+
+        tracking.updated_at = now
+        tracking.timeline.insert(
+            0,
+            TimelineEvent(
+                id=str(uuid.uuid4()),
+                title=f"Note Updated: {target_note.category}",
+                description=new_text.strip()[:180] + ("..." if len(new_text) > 180 else ""),
+                event_type="NOTE_UPDATED",
+                timestamp=now,
+                badge_variant="default"
+            )
+        )
+        self._save_to_disk()
+        return tracking
+
+    def delete_follow_up_note(
+        self,
+        case_id: str,
+        victim_id: str,
+        note_id: str
+    ) -> CaseTrackingDetail:
+        tracking = self.get_case_tracking(case_id, victim_id)
+        now = datetime.now()
+
+        initial_len = len(tracking.follow_up_notes)
+        tracking.follow_up_notes = [n for n in tracking.follow_up_notes if n.id != note_id]
+        if len(tracking.follow_up_notes) == initial_len:
+            raise ValueError(f"Follow-up note '{note_id}' not found.")
+
+        tracking.updated_at = now
+        tracking.timeline.insert(
+            0,
+            TimelineEvent(
+                id=str(uuid.uuid4()),
+                title="Follow-Up Note Removed",
+                description="Complainant deleted a saved communication note.",
+                event_type="NOTE_DELETED",
+                timestamp=now,
+                badge_variant="default"
+            )
+        )
+        self._save_to_disk()
+        return tracking
+
+    def update_complaint_status(
+        self,
+        case_id: str,
+        victim_id: str,
+        status: ComplaintStatus,
+        note: Optional[str] = None
+    ) -> CaseTrackingDetail:
+        """
+        Manually updates formal complaint status (ONLY triggered by explicit user action).
+        Preserves complete status history trail.
+        """
+        tracking = self.get_case_tracking(case_id, victim_id)
+        now = datetime.now()
+
+        tracking.complaint_status = status
+        tracking.complaint_status_updated_at = now
+        status_label = status.value.replace("_", " ").title()
+
+        tracking.status_history.insert(
+            0,
+            StatusHistoryItem(
+                id=str(uuid.uuid4()),
+                status=status.value,
+                status_label=status_label,
+                note=note,
+                updated_at=now,
+                updated_by="Citizen Complainant"
+            )
+        )
+
+        tracking.updated_at = now
+        desc = f"Citizen manually updated complaint status to '{status_label}'."
+        if note:
+            desc += f" Note: {note}"
+
+        tracking.timeline.insert(
+            0,
+            TimelineEvent(
+                id=str(uuid.uuid4()),
+                title=f"Complaint Status: {status_label}",
+                description=desc,
+                event_type="COMPLAINT_STATUS_CHANGED",
+                timestamp=now,
+                badge_variant="emerald" if status in [ComplaintStatus.RESOLVED, ComplaintStatus.ACTION_TAKEN] else "gold"
+            )
+        )
+
+        self._save_to_disk()
+        return tracking
+
+    def mark_documents_generated(self, case_id: str):
+        """Automatically updates document preparation checklist tasks upon generation."""
+        if case_id not in self._tracking_store:
+            return
+        tracking = self._tracking_store[case_id]
+        now = datetime.now()
+
+        for it in tracking.checklist_items:
+            if it.id in ["chk_1h_share_bank", "chk_24h_ack_details"]:
+                it.is_completed = True
+                it.completed_at = now
+                it.completion_source = "AUTOMATIC"
+
+        tracking.timeline.insert(
+            0,
+            TimelineEvent(
+                id=str(uuid.uuid4()),
+                title="Complaint Documents Package Generated",
+                description="Bank dispute letter, freeze requisition, and 1930 speaking script compiled.",
+                event_type="COMPLAINTS_GENERATED",
+                timestamp=now,
+                badge_variant="gold"
+            )
+        )
+        tracking.ready_documents = self._build_ready_docs(case_id, tracking.case_number)
+        tracking.updated_at = now
+        self._save_to_disk()
 
     def toggle_checklist_item(
         self,
@@ -741,13 +962,14 @@ class CaseTrackingService:
                 target_item = item
                 item.is_completed = is_completed
                 item.completed_at = now if is_completed else None
+                item.completion_source = "MANUAL"
                 break
 
         if not target_item:
             raise ValueError(f"Checklist item '{item_id}' not found.")
 
         tracking.updated_at = now
-        action_verb = "Completed" if is_completed else "Marked Incomplete"
+        action_verb = "Completed (Manual Confirmation)" if is_completed else "Marked Incomplete"
         stage_label = target_item.stage.value.replace("_", " ").title()
 
         tracking.timeline.insert(
@@ -763,6 +985,7 @@ class CaseTrackingService:
         )
 
         tracking.important_next_actions = self._compute_next_actions(tracking)
+        self._save_to_disk()
         return tracking
 
     def get_emergency_dashboard(self, case_id: str, victim_id: str) -> EmergencyDashboardData:
@@ -785,6 +1008,8 @@ class CaseTrackingService:
             case_id=tracking.case_id,
             case_number=tracking.case_number,
             current_status=tracking.current_status,
+            complaint_status=tracking.complaint_status,
+            complaint_status_updated_at=tracking.complaint_status_updated_at,
             case_created_at=tracking.created_at,
             golden_hour_active=tracking.golden_hour_active,
             amount_lost=tracking.amount_lost,
@@ -801,6 +1026,7 @@ class CaseTrackingService:
             official_links=DEFAULT_OFFICIAL_LINKS,
             disclaimer=tracking.disclaimer
         )
+
 
 
 case_tracking_service = CaseTrackingService()

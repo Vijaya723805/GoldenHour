@@ -16,6 +16,7 @@ from app.services.complaint_service import complaint_service
 from app.services.pdf_service import pdf_service
 from app.services.auth_service import auth_service
 from app.services.dashboard_service import dashboard_service
+from app.services.case_tracking_service import case_tracking_service
 
 router = APIRouter()
 
@@ -49,6 +50,9 @@ def generate_case_complaints(
         language=req.language,
         force_regenerate=req.regenerate
     )
+
+    # Automatically update case tracking document preparation tasks
+    case_tracking_service.mark_documents_generated(case_id=case_id)
 
     return ApiResponse(
         success=True,

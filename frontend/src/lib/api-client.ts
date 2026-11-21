@@ -11,6 +11,7 @@ import {
   EvidenceItem,
   EvidenceCategory,
   EvidenceExtractionResult,
+  IntakeAnalysisResult,
   UserVerificationPayload,
   CaseVerificationReport,
   ConfirmVerificationPayload,
@@ -192,6 +193,29 @@ export async function deleteCaseEvidence(
 export function getEvidencePreviewUrl(caseId: string, evidenceId: string): string {
   return `${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/preview`;
 }
+
+export async function analyzeEvidenceIntake(
+  files: File[],
+  token?: string | null
+): Promise<ApiResponse<IntakeAnalysisResult>> {
+  try {
+    const formData = new FormData();
+    files.forEach((f) => formData.append("files", f));
+
+    const res = await fetch(`${API_BASE_URL}/evidence/analyze-intake`, {
+      method: "POST",
+      headers: getAuthHeaders(token),
+      body: formData,
+    });
+    return await res.json();
+  } catch (err: any) {
+    return {
+      success: false,
+      error: { message: err.message || "Failed to analyze intake screenshots" },
+    };
+  }
+}
+
 
 // Module 3: AI Evidence Extraction Client Methods
 export async function triggerEvidenceExtraction(
@@ -708,6 +732,76 @@ export async function fetchOfficialReportingLinks(): Promise<ApiResponse<Officia
     };
   }
 }
+
+export async function updateComplaintStatus(
+  caseId: string,
+  status: string,
+  note?: string,
+  token?: string | null
+): Promise<ApiResponse<CaseTrackingDetail>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/tracking/cases/${caseId}/complaint-status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(token),
+      },
+      body: JSON.stringify({ status, note }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return {
+      success: false,
+      error: { message: err.message || "Failed to update complaint status" },
+    };
+  }
+}
+
+export async function editFollowUpNote(
+  caseId: string,
+  noteId: string,
+  noteText: string,
+  category?: string,
+  followUpDate?: string,
+  token?: string | null
+): Promise<ApiResponse<CaseTrackingDetail>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/tracking/cases/${caseId}/notes/${noteId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(token),
+      },
+      body: JSON.stringify({ note_text: noteText, category, follow_up_date: followUpDate }),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return {
+      success: false,
+      error: { message: err.message || "Failed to edit note" },
+    };
+  }
+}
+
+export async function deleteFollowUpNote(
+  caseId: string,
+  noteId: string,
+  token?: string | null
+): Promise<ApiResponse<CaseTrackingDetail>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/tracking/cases/${caseId}/notes/${noteId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(token),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return {
+      success: false,
+      error: { message: err.message || "Failed to delete note" },
+    };
+  }
+}
+
 
 
 

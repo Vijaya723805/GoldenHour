@@ -85,6 +85,7 @@ export interface FraudCaseDetail extends FraudCaseSummary {
   preferred_language?: string;
   contact_phone?: string;
   contact_email?: string;
+  fraudster_phone?: string;
   evidence_items: EvidenceItem[];
 }
 
@@ -97,10 +98,63 @@ export interface CreateCasePayload {
   transaction_id_utr?: string;
   beneficiary_upi_id?: string;
   beneficiary_bank?: string;
+  fraudster_phone?: string;
   preferred_language?: string;
   contact_phone?: string;
   contact_email?: string;
+  evidence_ids?: string[];
 }
+
+export interface IntakeScreenshotItem {
+  evidence_id: string;
+  file_name: string;
+  file_size: number;
+  content_type: string;
+  category: EvidenceCategory;
+  storage_path: string;
+  extracted_text_summary: string;
+  transaction_id_utr?: string;
+  amount?: number;
+  timestamp?: string;
+  sender_upi_id?: string;
+  beneficiary_upi_id?: string;
+  fraudster_phone?: string;
+  beneficiary_bank?: string;
+  app_used?: string;
+  detected_category?: string;
+  is_blurry?: boolean;
+  quality_warning?: string | null;
+}
+
+export interface ExtractedFieldItem {
+  value: any;
+  source_screenshot?: string | null;
+  confidence: number;
+  status: "Extracted" | "Needs Review";
+  verification_note?: string;
+}
+
+export interface IntakeAnalysisResult {
+  incident_title: string;
+  scam_category: string;
+  incident_description: string;
+  transaction_date_time?: string | null;
+  transaction_id_utr?: string | null;
+  beneficiary_upi_id?: string | null;
+  fraudster_phone?: string | null;
+  suggested_amount?: number | null;
+  app_used?: string | null;
+  beneficiary_bank?: string | null;
+  sender_upi_id?: string | null;
+  beneficiary_name?: string | null;
+  missing_fields: string[];
+  conflict_warnings?: string[];
+  quality_warnings?: string[];
+  fields?: Record<string, ExtractedFieldItem>;
+  debug_diagnostics?: Record<string, any>;
+  uploaded_evidence: IntakeScreenshotItem[];
+}
+
 
 export interface DashboardStats {
   total_cases: number;
@@ -500,6 +554,21 @@ export type TrackingStatus =
   | "RESOLVED"
   | "CLOSED";
 
+export type ComplaintStatus =
+  | "NOT_SUBMITTED"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "ACTION_TAKEN"
+  | "RESOLVED"
+  | "REJECTED_CLOSED";
+
+export interface StatusHistoryItem {
+  status: ComplaintStatus;
+  changed_at: string;
+  note?: string;
+  changed_by?: string;
+}
+
 export interface EmergencyChecklistItem {
   id: string;
   stage: ActionStage;
@@ -507,6 +576,8 @@ export interface EmergencyChecklistItem {
   description: string;
   is_completed: boolean;
   completed_at?: string | null;
+  completion_source?: "AUTOMATIC" | "MANUAL";
+  is_auto_completable?: boolean;
   action_url?: string | null;
   action_label?: string | null;
   category?: string | null;
@@ -527,7 +598,9 @@ export interface FollowUpNote {
   note_text: string;
   author: string;
   category: string;
+  follow_up_date?: string | null;
   created_at: string;
+  updated_at?: string | null;
 }
 
 export interface OfficialLinkItem {
@@ -548,6 +621,7 @@ export interface ReadyDocumentItem {
   view_url: string;
   is_ready: boolean;
   recommended_stage: string;
+  generated_at?: string | null;
 }
 
 export interface FollowUpInfo {
@@ -571,6 +645,9 @@ export interface CaseTrackingDetail {
   beneficiary_upi_id?: string | null;
   beneficiary_bank?: string | null;
   current_status: TrackingStatus;
+  complaint_status?: ComplaintStatus;
+  complaint_status_updated_at?: string | null;
+  status_history?: StatusHistoryItem[];
   created_at: string;
   updated_at: string;
   golden_hour_active: boolean;
@@ -595,6 +672,9 @@ export interface EmergencyDashboardData {
   case_id: string;
   case_number: string;
   current_status: TrackingStatus;
+  complaint_status?: ComplaintStatus;
+  complaint_status_updated_at?: string | null;
+  status_history?: StatusHistoryItem[];
   case_created_at: string;
   golden_hour_active: boolean;
   amount_lost: number;
