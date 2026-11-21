@@ -30,12 +30,14 @@ export function Header() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold tracking-tight text-[#172F4D] transition-colors">
-                GoldenHour
+                {t("nav.app_title", "GoldenHour")}
               </span>
-              <Badge variant="gold" className="text-[10px] py-0 px-2 font-bold bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0]">Fintech Shield</Badge>
+              <Badge variant="gold" className="text-[10px] py-0 px-2 font-bold bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0]">
+                {t("nav.badge_fintech", "Fintech Shield")}
+              </Badge>
             </div>
             <p className="text-[11px] text-[#71849A] font-mono tracking-tight hidden sm:block">
-              UPI Cybercrime Emergency Response & Lien System
+              {t("nav.app_subtitle", "UPI Cybercrime Emergency Response & Lien System")}
             </p>
           </div>
         </Link>
@@ -60,14 +62,14 @@ export function Header() {
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D]">
             <Activity className="w-3.5 h-3.5 text-[#172F4D]" />
             {apiOnline === null ? (
-              <span className="text-[#71849A]">Verifying...</span>
+              <span className="text-[#71849A]">{t("nav.verifying", "Verifying...")}</span>
             ) : apiOnline ? (
               <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Systems Online
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> {t("nav.systems_online", "Systems Online")}
               </span>
             ) : (
               <span className="text-amber-700 font-semibold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span> Standalone Mode
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span> {t("nav.standalone_mode", "Standalone Mode")}
               </span>
             )}
           </div>
@@ -78,7 +80,7 @@ export function Header() {
             className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold hover:bg-red-100 transition-all"
           >
             <PhoneCall className="w-3.5 h-3.5 text-red-600 animate-pulse" />
-            <span>1930 Helpline</span>
+            <span>{t("nav.helpline", "1930 Helpline")}</span>
           </a>
 
           {/* Dashboard or Login Button */}

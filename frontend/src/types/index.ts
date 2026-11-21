@@ -486,6 +486,16 @@ export interface AssistantChatResponse {
   disclaimer: string;
 }
 
+export interface TranslateHistoryRequest {
+  messages: Array<Record<string, any>>;
+  target_language: AssistantLanguage;
+}
+
+export interface TranslateHistoryResponse {
+  translated_messages: Array<Record<string, any>>;
+  target_language: AssistantLanguage;
+}
+
 // ==========================================
 // Module 6: AI Complaint Generation Types
 // ==========================================

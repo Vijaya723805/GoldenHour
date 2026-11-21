@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
-import { Shield } from "lucide-react";
+import { Shield, ArrowRight } from "lucide-react";
 
 export default function RootEntryPage() {
   const router = useRouter();
@@ -11,12 +12,17 @@ export default function RootEntryPage() {
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace("/dashboard");
-      } else {
-        router.replace("/login");
-      }
+      router.replace("/dashboard");
     }
+
+    // Fallback: auto-redirect after 1 second if router is delayed
+    const timer = setTimeout(() => {
+      if (typeof window !== "undefined") {
+        window.location.href = "/dashboard";
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, [isLoading, isAuthenticated, router]);
 
   return (
@@ -28,8 +34,19 @@ export default function RootEntryPage() {
         Golden<span className="text-[#477DA8]">Hour</span>
       </h1>
       <p className="mt-1 text-xs font-mono text-[#71849A]">
-        Authenticating GoldenHour session & redirecting...
+        Authenticating GoldenHour session & redirecting to dashboard...
       </p>
+
+      {/* Instant access fallback button */}
+      <div className="mt-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#172F4D] hover:bg-[#1D3B60] text-white text-xs font-semibold shadow-sm transition-all"
+        >
+          <span>Open Incident Dashboard</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
     </div>
   );
 }

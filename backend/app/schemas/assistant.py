@@ -11,12 +11,22 @@ class AssistantLanguage(str, Enum):
 
 
 class AssistantTopic(str, Enum):
+    GREETING = "GREETING"
     HELPLINE_1930 = "HELPLINE_1930"
     CYBERCRIME_PORTAL = "CYBERCRIME_PORTAL"
     EVIDENCE_PRESERVATION = "EVIDENCE_PRESERVATION"
     BANK_DISPUTE_VS_FREEZE = "BANK_DISPUTE_VS_FREEZE"
     SENIOR_CITIZEN_GUIDANCE = "SENIOR_CITIZEN_GUIDANCE"
     RBI_ZERO_LIABILITY = "RBI_ZERO_LIABILITY"
+    FAKE_QR_SCAM = "FAKE_QR_SCAM"
+    PHISHING_LINK = "PHISHING_LINK"
+    REMOTE_ACCESS = "REMOTE_ACCESS"
+    UNAUTHORIZED_DEBIT = "UNAUTHORIZED_DEBIT"
+    SIM_FRAUD = "SIM_FRAUD"
+    WHATSAPP_IMPERSONATION = "WHATSAPP_IMPERSONATION"
+    CASE_SPECIFIC_INQUIRY = "CASE_SPECIFIC_INQUIRY"
+    UNRELATED_INQUIRY = "UNRELATED_INQUIRY"
+    LEGAL_LIMITATION = "LEGAL_LIMITATION"
     GENERAL = "GENERAL"
 
 
@@ -56,3 +66,13 @@ class ChatResponse(BaseModel):
         "It cannot freeze accounts, guarantee fund recovery, or auto-file police complaints. "
         "Never share your UPI PIN or OTP with anyone."
     )
+
+
+class TranslateHistoryRequest(BaseModel):
+    messages: List[Dict[str, Any]]
+    target_language: AssistantLanguage
+
+
+class TranslateHistoryResponse(BaseModel):
+    translated_messages: List[Dict[str, Any]]
+    target_language: AssistantLanguage

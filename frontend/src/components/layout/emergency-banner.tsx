@@ -1,9 +1,12 @@
 "use client";
 
 import React from "react";
-import { PhoneCall, ShieldAlert, ExternalLink, Clock } from "lucide-react";
+import { PhoneCall, ExternalLink } from "lucide-react";
+import { useLanguage } from "@/context/language-context";
 
 export function EmergencyBanner() {
+  const { t } = useLanguage();
+
   return (
     <div className="bg-[#172F4D] text-white px-4 py-2.5 border-b border-[#DCE7F0] shadow-card">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -13,10 +16,13 @@ export function EmergencyBanner() {
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
           </span>
           <span className="font-bold tracking-wider uppercase bg-red-500/20 text-red-200 border border-red-400/30 px-2 py-0.5 rounded text-xs">
-            Emergency Priority
+            {t("nav.emergency_priority", "Emergency Priority")}
           </span>
           <span className="text-[#E1F1FB] font-medium text-xs sm:text-sm">
-            Lost money in a UPI scam? Action in the first 2 hours gives the highest chance to freeze stolen funds.
+            {t(
+              "nav.emergency_banner_text",
+              "Lost money in a UPI scam? Action in the first 2 hours gives the highest chance to freeze stolen funds."
+            )}
           </span>
         </div>
 
@@ -26,7 +32,7 @@ export function EmergencyBanner() {
             className="flex items-center gap-2 font-bold bg-[#EF4444] hover:bg-[#DC2626] text-white px-3.5 py-1.5 rounded-lg text-xs sm:text-sm transition-all shadow-card"
           >
             <PhoneCall className="w-4 h-4 animate-bounce" />
-            <span>Call 1930 Helpline</span>
+            <span>{t("nav.call_1930", "Call 1930 Helpline")}</span>
           </a>
           <a
             href="https://cybercrime.gov.in"

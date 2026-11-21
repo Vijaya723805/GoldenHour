@@ -22,7 +22,9 @@ import {
   AlertTriangle,
   RefreshCw,
   Globe,
-  HeartHandshake
+  HeartHandshake,
+  Trash2,
+  ChevronDown
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +37,12 @@ import {
   QuickAction,
   FraudCaseSummary 
 } from "@/types";
-import { sendAssistantChat, fetchAssistantTopics, fetchDashboardCases } from "@/lib/api-client";
+import { 
+  sendAssistantChat, 
+  translateAssistantHistory, 
+  fetchAssistantTopics, 
+  fetchDashboardCases 
+} from "@/lib/api-client";
 
 interface UIMessage {
   id: string;
@@ -48,10 +55,37 @@ interface UIMessage {
   timestamp: string;
 }
 
+const STATIC_SUGGESTED_QUESTIONS: Record<AssistantLanguage, string[]> = {
+  en: [
+    "How do I call 1930?",
+    "How do I report UPI fraud?",
+    "What evidence should I save?",
+    "How do I contact my bank?",
+    "Can my money be recovered?",
+    "What should I do after a fake QR scam?"
+  ],
+  te: [
+    "1930 నంబర్కు ఎలా కాల్ చేయాలి?",
+    "UPI మోసాన్ని ఎలా ఫిర్యాదు చేయాలి?",
+    "నేను ఏ ఆధారాలను భద్రపరచాలి?",
+    "నా బ్యాంకును ఎలా సంప్రదించాలి?",
+    "నా డబ్బు తిరిగి వస్తుందా?",
+    "నకిలీ QR కోడ్ మోసం తర్వాత ఏమి చేయాలి?"
+  ],
+  hi: [
+    "1930 पर कैसे कॉल करें?",
+    "UPI धोखाधड़ी की शिकायत कैसे करें?",
+    "कौन से सबूत सुरक्षित रखने चाहिए?",
+    "बैंक से कैसे संपर्क करें?",
+    "क्या मेरा पैसा वापस मिल सकता है?",
+    "फर्जी QR कोड धोखाधड़ी के बाद क्या करें?"
+  ]
+};
+
 export default function AssistantPage() {
   const { user, token } = useAuth();
   
-  // Settings & Toggles
+  // Settings & Toggles with LocalStorage persistence
   const [language, setLanguage] = useState<AssistantLanguage>("en");
   const [seniorMode, setSeniorMode] = useState(false);
   const [useCaseContext, setUseCaseContext] = useState(false);
@@ -62,7 +96,7 @@ export default function AssistantPage() {
   const [messages, setMessages] = useState<UIMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [topics, setTopics] = useState<Record<string, Array<{ id: string; label: string; topic: string }>>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
   
   // Voice & Speech (Speech-to-Text & Text-to-Speech)
   const [isListening, setIsListening] = useState(false);
@@ -72,19 +106,40 @@ export default function AssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  // Initialize from LocalStorage or Defaults
   useEffect(() => {
     if (typeof window !== "undefined") {
+      const savedLang = localStorage.getItem("goldenhour_chat_lang") as AssistantLanguage;
+      if (savedLang && ["en", "te", "hi"].includes(savedLang)) {
+        setLanguage(savedLang);
+      }
+
+      const savedSenior = localStorage.getItem("goldenhour_senior_mode");
+      if (savedSenior !== null) {
+        setSeniorMode(savedSenior === "true");
+      }
+
+      const savedHistory = localStorage.getItem("goldenhour_chat_history");
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+          } else {
+            setMessages([getWelcomeMessage(savedLang || "en", savedSenior === "true")]);
+          }
+        } catch {
+          setMessages([getWelcomeMessage(savedLang || "en", savedSenior === "true")]);
+        }
+      } else {
+        setMessages([getWelcomeMessage(savedLang || "en", savedSenior === "true")]);
+      }
+
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         setSpeechSupported(true);
       }
     }
-
-    fetchAssistantTopics().then((res) => {
-      if (res.success && res.data) {
-        setTopics(res.data);
-      }
-    });
 
     fetchDashboardCases(token).then((res) => {
       if (res.success && res.data && res.data.length > 0) {
@@ -93,70 +148,127 @@ export default function AssistantPage() {
         setUseCaseContext(true);
       }
     });
-
-    setMessages([getWelcomeMessage(language, seniorMode)]);
   }, [token]);
 
+  // Persist messages to LocalStorage
   useEffect(() => {
-    if (messages.length <= 1) {
-      setMessages([getWelcomeMessage(language, seniorMode)]);
+    if (typeof window !== "undefined" && messages.length > 0) {
+      localStorage.setItem("goldenhour_chat_history", JSON.stringify(messages));
     }
-  }, [language, seniorMode]);
+  }, [messages]);
 
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isTranslating]);
 
   function getWelcomeMessage(lang: AssistantLanguage, senior: boolean): UIMessage {
     const ts = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     if (lang === "te") {
       return {
-        id: "msg_welcome",
+        id: `welcome_${Date.now()}`,
         role: "assistant",
         language: "te",
         timestamp: ts,
         content: senior
           ? "నమస్కారం. నేను గోల్డెన్‌అవర్ AI సైబర్ సహాయకుడిని. ప్రశాంతంగా ఉండండి, మేము మీకు సహాయం చేస్తాము. మీ UPI మోసానికి సంబంధించి 1930 హెల్ప్‌లైన్, బ్యాంక్ వివాదం లేదా సైబర్ పోర్టల్ గురించి నన్ను ఏ ప్రశ్నైనా అడగండి."
-          : "నమస్కారం! నేను గోల్డెన్‌అవర్ బహుభాషా AI సైబర్ డిఫెన్స్ అసిస్టెంట్‌ని. 1930 నేషనల్ హెల్ప్‌లైన్ సంప్రదింపులు, cybercrime.gov.in లో రిపోర్టింగ్, బ్యాంక్ లీన్/ఫ్రీజ్ తేడాలు మరియు ఆధారాల భద్రపరచడంపై మీకు మార్గదర్శనం చేస్తాను. నేను మీకు ఎలా సహాయపడగలను?",
+          : "నమస్కారం! గోల్డెన్‌అవర్‌కి స్వాగతం. నేను మీ బహుభాషా AI సైబర్ డిఫెన్స్ అసిస్టెంట్‌ని. 1930 నేషనల్ హెల్ప్‌లైన్, cybercrime.gov.in పోర్టల్ మరియు బ్యాంక్ లీన్/ఫ్రీజ్ వివాదాలపై మీకు ఖచ్చితమైన మార్గదర్శనం చేస్తాను. నేను మీకు ఎలా సహాయపడగలను?",
         followUps: [
-          "1930 సైబర్ హెల్ప్‌లైన్‌కు ఎలా కాల్ చేయాలి?",
-          "పోర్టల్‌లో ఫిర్యాదు మరియు ఖాతా ఫ్రీజ్ మధ్య తేడా?",
-          "సీనియర్ సిటిజన్ సులభ రక్షణ మార్గదర్శి"
+          "1930 నంబర్కు ఎలా కాల్ చేయాలి?",
+          "UPI మోసాన్ని ఎలా ఫిర్యాదు చేయాలి?",
+          "నేను ఏ ఆధారాలను భద్రపరచాలి?"
         ]
       };
     } else if (lang === "hi") {
       return {
-        id: "msg_welcome",
+        id: `welcome_${Date.now()}`,
         role: "assistant",
         language: "hi",
         timestamp: ts,
         content: senior
           ? "नमस्ते। मैं गोल्डनआवर AI साइबर सहायक हूँ। बिल्कुल घबराएं नहीं, हम आपकी पूरी मदद करेंगे। 1930 हेल्पलाइन, बैंक में शिकायत या सबूत जुटाने के बारे में आप मुझसे बेझिझक पूछ सकते हैं।"
-          : "नमस्ते! मैं गोल्डनआवर का बहुभाषी AI साइबर डिफेंस असिस्टेंट हूँ। 1930 साइबर हेल्पलाइन, cybercrime.gov.in पर रिपोर्टिंग, बैंक खाता लीन/फ्रीज नियम और साक्ष्य संरक्षण पर आधिकारिक मार्गदर्शन के लिए तैयार हूँ। मैं आपकी क्या मदद कर सकता हूँ?",
+          : "नमस्ते! गोल्डनआवर में आपका स्वागत है। मैं आपका बहुभाषी AI साइबर डिफेंस असिस्टेंट हूँ। 1930 साइबर हेल्पलाइन, cybercrime.gov.in पर रिपोर्टिंग, और बैंक खाता लीन/फ्रीज प्रक्रियाओं पर आधिकारिक मार्गदर्शन के लिए तैयार हूँ। मैं आपकी क्या मदद कर सकता हूँ?",
         followUps: [
-          "1930 साइबर हेल्पलाइन पर कॉल कैसे करें?",
-          "रिपोर्टिंग और बैंक अकाउंट फ्रीज में क्या अंतर है?",
-          "धोखाधड़ी में कौन से सबूत सुरक्षित रखने चाहिए?"
+          "1930 पर कैसे कॉल करें?",
+          "UPI धोखाधड़ी की शिकायत कैसे करें?",
+          "कौन से सबूत सुरक्षित रखने चाहिए?"
         ]
       };
     } else {
       return {
-        id: "msg_welcome",
+        id: `welcome_${Date.now()}`,
         role: "assistant",
         language: "en",
         timestamp: ts,
         content: senior
           ? "Hello. I am GoldenHour's AI Cyber Assistant. Please take a deep breath; cyber fraud happens to many honest citizens daily. I will guide you step-by-step through calling 1930 and contacting your bank. How can I help you right now?"
-          : "Hello! I am GoldenHour's Multilingual AI Emergency Cyber Assistant. I specialize in Indian UPI fraud remediation, 1930 Golden Hour helpline SOPs, cybercrime.gov.in reporting, and RBI customer liability directives. How can I assist you with your case today?",
+          : "Hello! Welcome to GoldenHour. I am your specialized AI Emergency Cyber Assistant. I provide context-aware guidance on 1930 Golden Hour helpline SOPs, cybercrime.gov.in reporting, and RBI customer liability directives. How can I assist you with your case today?",
         followUps: [
-          "How do I contact the 1930 helpline?",
-          "What is the difference between reporting and freezing an account?",
-          "What evidence should I preserve?",
-          "Senior citizen step-by-step guidance"
+          "How do I call 1930?",
+          "How do I report UPI fraud?",
+          "What evidence should I save?"
         ]
       };
     }
   }
+
+  // Language Switcher Handler: Translates Visible History and Preserves Context
+  const handleLanguageChange = async (newLang: AssistantLanguage) => {
+    if (newLang === language) return;
+    setLanguage(newLang);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("goldenhour_chat_lang", newLang);
+    }
+
+    if (messages.length === 0) {
+      setMessages([getWelcomeMessage(newLang, seniorMode)]);
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const payloadMessages = messages.map((m) => ({
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp,
+      }));
+
+      const res = await translateAssistantHistory(payloadMessages, newLang);
+      if (res.success && res.data?.translated_messages) {
+        const updated: UIMessage[] = res.data.translated_messages.map((tm: any, i: number) => ({
+          id: tm.id || messages[i]?.id || `msg_${i}`,
+          role: tm.role || messages[i]?.role || "assistant",
+          content: tm.content,
+          language: newLang,
+          timestamp: tm.timestamp || messages[i]?.timestamp || "",
+          quickActions: messages[i]?.quickActions,
+          followUps: messages[i]?.followUps,
+          topic: messages[i]?.topic,
+        }));
+        setMessages(updated);
+      }
+    } catch (e) {
+      console.error("Language translation error:", e);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleSeniorModeToggle = () => {
+    const nextVal = !seniorMode;
+    setSeniorMode(nextVal);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("goldenhour_senior_mode", String(nextVal));
+    }
+  };
+
+  const handleClearChat = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("goldenhour_chat_history");
+    }
+    setMessages([getWelcomeMessage(language, seniorMode)]);
+  };
 
   const toggleListening = () => {
     if (!speechSupported) {
@@ -247,7 +359,7 @@ export default function AssistantPage() {
     setIsLoading(true);
 
     try {
-      const history = messages.slice(-4).map((m) => ({
+      const history = messages.slice(-6).map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -297,7 +409,8 @@ export default function AssistantPage() {
     }
   };
 
-  const currentTopics = topics[language] || topics["en"] || [];
+  const currentQuestions = STATIC_SUGGESTED_QUESTIONS[language] || STATIC_SUGGESTED_QUESTIONS.en;
+  const activeCaseObj = userCases.find((c) => c.id === activeCaseId) || userCases[0];
 
   return (
     <div className="space-y-4 max-w-5xl mx-auto pb-12 animate-fadeIn">
@@ -315,17 +428,18 @@ export default function AssistantPage() {
             AI Cyber Defense Assistant
           </h1>
           <p className="text-xs sm:text-sm text-[#71849A] mt-0.5">
-            Multilingual guidance on 1930 Golden Hour reporting, evidence preservation, and bank liens.
+            Multilingual intelligent guidance on 1930 Golden Hour reporting, evidence preservation, and bank liens.
           </p>
         </div>
 
-        {/* Toolbar: Language Switcher, Senior Citizen Mode, Case Context */}
+        {/* Toolbar: Language Switcher, Senior Citizen Mode, Clear Chat */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Language Selector */}
           <div className="flex items-center bg-white p-1 rounded-xl border border-[#DCE7F0] text-xs shadow-card">
             <Globe className="w-3.5 h-3.5 text-[#172F4D] ml-2 mr-1" />
             <button
-              onClick={() => setLanguage("en")}
+              onClick={() => handleLanguageChange("en")}
+              disabled={isTranslating}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
                 language === "en" ? "bg-[#172F4D] text-white shadow-card" : "text-[#71849A] hover:text-[#172F4D]"
               }`}
@@ -333,7 +447,8 @@ export default function AssistantPage() {
               English
             </button>
             <button
-              onClick={() => setLanguage("te")}
+              onClick={() => handleLanguageChange("te")}
+              disabled={isTranslating}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
                 language === "te" ? "bg-[#172F4D] text-white shadow-card" : "text-[#71849A] hover:text-[#172F4D]"
               }`}
@@ -341,7 +456,8 @@ export default function AssistantPage() {
               తెలుగు
             </button>
             <button
-              onClick={() => setLanguage("hi")}
+              onClick={() => handleLanguageChange("hi")}
+              disabled={isTranslating}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
                 language === "hi" ? "bg-[#172F4D] text-white shadow-card" : "text-[#71849A] hover:text-[#172F4D]"
               }`}
@@ -352,7 +468,7 @@ export default function AssistantPage() {
 
           {/* Senior Citizen Mode Toggle */}
           <button
-            onClick={() => setSeniorMode(!seniorMode)}
+            onClick={handleSeniorModeToggle}
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all shadow-card ${
               seniorMode
                 ? "bg-[#E1F1FB] border-[#477DA8] text-[#172F4D] font-bold"
@@ -364,28 +480,53 @@ export default function AssistantPage() {
             <span>Senior Citizen Mode</span>
             {seniorMode && <span className="w-1.5 h-1.5 rounded-full bg-[#172F4D]" />}
           </button>
+
+          {/* Clear Chat Button */}
+          <button
+            onClick={handleClearChat}
+            className="p-2 rounded-xl border border-[#DCE7F0] bg-white hover:bg-red-50 text-[#71849A] hover:text-red-600 transition-colors shadow-card"
+            title={language === "te" ? "చాట్ క్లియర్ చేయండి" : language === "hi" ? "चैट साफ करें" : "Clear Chat History"}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
       {/* Case Context & Security Guardrails Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] text-xs shadow-card">
-        <label className="flex items-center gap-2 cursor-pointer text-[#172F4D] select-none">
-          <input
-            type="checkbox"
-            checked={useCaseContext}
-            disabled={userCases.length === 0}
-            onChange={(e) => setUseCaseContext(e.target.checked)}
-            className="rounded border-[#DCE7F0] bg-white text-[#172F4D] focus:ring-[#172F4D]"
-          />
-          <span className="flex items-center gap-1.5 font-medium">
-            <UserCheck className="w-3.5 h-3.5 text-[#172F4D]" />
-            <span>
-              {userCases.length > 0
-                ? `Inject active case parameters (${userCases.find((c) => c.id === activeCaseId)?.case_number || userCases[0].case_number}: ${userCases.find((c) => c.id === activeCaseId)?.title || userCases[0].title})`
-                : "Inject active case parameters (No registered fraud cases yet)"}
+        <div className="flex items-center gap-2 text-[#172F4D] flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={useCaseContext}
+              disabled={userCases.length === 0}
+              onChange={(e) => setUseCaseContext(e.target.checked)}
+              className="rounded border-[#DCE7F0] bg-white text-[#172F4D] focus:ring-[#172F4D]"
+            />
+            <span className="flex items-center gap-1.5 font-semibold">
+              <UserCheck className="w-3.5 h-3.5 text-[#172F4D]" />
+              <span>Use Active Case Context</span>
             </span>
-          </span>
-        </label>
+          </label>
+
+          {useCaseContext && userCases.length > 0 && (
+            <select
+              value={activeCaseId || ""}
+              onChange={(e) => setActiveCaseId(e.target.value)}
+              className="bg-white border border-[#DCE7F0] rounded-lg px-2.5 py-1 text-xs text-[#172F4D] font-medium outline-none focus:border-[#172F4D]"
+            >
+              {userCases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.case_number}: {c.title.length > 30 ? c.title.substring(0, 30) + "..." : c.title}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {userCases.length === 0 && (
+            <span className="text-[#71849A]">(No registered fraud cases yet)</span>
+          )}
+        </div>
 
         <div className="flex items-center gap-2 text-[11px] text-emerald-800 font-mono font-medium">
           <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -395,16 +536,30 @@ export default function AssistantPage() {
 
       {/* Main Chat Interface */}
       <Card className={`border-[#DCE7F0] shadow-card bg-white flex flex-col justify-between transition-all ${
-        seniorMode ? "h-[620px]" : "h-[540px]"
+        seniorMode ? "h-[650px]" : "h-[560px]"
       }`}>
         {/* Chat Messages Scrollable Area */}
         <CardContent className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* Translating Banner */}
+          {isTranslating && (
+            <div className="p-2.5 rounded-xl bg-[#E1F1FB] border border-[#DCE7F0] flex items-center justify-center gap-2 text-xs text-[#172F4D] animate-pulse">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              <span>
+                {language === "te"
+                  ? "సంభాషణను తెలుగులోకి అనువదిస్తోంది..."
+                  : language === "hi"
+                  ? "बातचीत का हिंदी में अनुवाद किया जा रहा है..."
+                  : "Translating conversation into English..."}
+              </span>
+            </div>
+          )}
+
           {messages.map((m) => (
             <div
               key={m.id}
               className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
             >
-              <div className="flex items-end gap-2 max-w-[88%] sm:max-w-[80%]">
+              <div className="flex items-end gap-2 max-w-[90%] sm:max-w-[82%]">
                 {m.role === "assistant" && (
                   <div className="w-8 h-8 rounded-full bg-[#E1F1FB] border border-[#DCE7F0] flex items-center justify-center text-[#172F4D] shrink-0 mb-1 shadow-card">
                     <Bot className="w-4 h-4 text-[#172F4D]" />
@@ -413,7 +568,7 @@ export default function AssistantPage() {
 
                 <div
                   className={`rounded-2xl p-4 leading-relaxed transition-all ${
-                    seniorMode ? "text-sm sm:text-base leading-relaxed" : "text-xs sm:text-sm"
+                    seniorMode ? "text-base sm:text-lg leading-relaxed font-medium" : "text-xs sm:text-sm"
                   } ${
                     m.role === "user"
                       ? "bg-[#172F4D] text-white rounded-br-none shadow-card font-medium"
@@ -504,18 +659,19 @@ export default function AssistantPage() {
           <div ref={messagesEndRef} />
         </CardContent>
 
-        {/* Quick Topic Chips Toolbar */}
-        <div className="px-4 py-2 bg-[#F1F6FB] border-t border-[#DCE7F0] overflow-x-auto flex items-center gap-2 text-xs scrollbar-none">
-          <span className="text-[11px] font-semibold text-[#71849A] uppercase tracking-wider shrink-0 mr-1">
-            {language === "te" ? "త్వరిత ప్రశ్నలు:" : language === "hi" ? "अक्सर पूछे जाने वाले सवाल:" : "Common Inquiries:"}
+        {/* Dynamic Suggested Questions Toolbar */}
+        <div className="px-4 py-2.5 bg-[#F1F6FB] border-t border-[#DCE7F0] overflow-x-auto flex items-center gap-2 text-xs scrollbar-none">
+          <span className="text-[11px] font-bold text-[#172F4D] uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-[#477DA8]" />
+            {language === "te" ? "సూచించిన ప్రశ్నలు:" : language === "hi" ? "सुझाए गए प्रश्न:" : "Suggested Questions:"}
           </span>
-          {currentTopics.map((item) => (
+          {currentQuestions.map((qText, idx) => (
             <button
-              key={item.id}
-              onClick={() => sendMessage(item.label)}
-              className="px-2.5 py-1 rounded-lg bg-white hover:bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] text-[11px] font-medium whitespace-nowrap transition-colors shadow-card"
+              key={idx}
+              onClick={() => sendMessage(qText)}
+              className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#E1F1FB] text-[#172F4D] border border-[#DCE7F0] text-xs font-semibold whitespace-nowrap transition-colors shadow-card shrink-0"
             >
-              {item.label}
+              {qText}
             </button>
           ))}
         </div>
@@ -539,7 +695,7 @@ export default function AssistantPage() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            disabled={isLoading}
+            disabled={isLoading || isTranslating}
             placeholder={
               language === "te"
                 ? "1930 హెల్ప్‌లైన్, సైబర్ పోర్టల్, ఆధారాలు లేదా RBI నియమాల గురించి అడగండి..."
@@ -548,7 +704,7 @@ export default function AssistantPage() {
                 : "Ask about 1930 helpline SOPs, cybercrime.gov.in, account freeze vs reporting..."
             }
             className={`flex-1 px-4 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-[#172F4D] placeholder-[#71849A] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors ${
-              seniorMode ? "text-sm sm:text-base" : "text-xs sm:text-sm"
+              seniorMode ? "text-base sm:text-lg font-medium" : "text-xs sm:text-sm"
             }`}
           />
 
@@ -556,7 +712,7 @@ export default function AssistantPage() {
             type="submit"
             variant="primary"
             size="md"
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || isTranslating || !input.trim()}
             className="gap-1.5 px-4 font-bold text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-card"
           >
             <Send className="w-4 h-4" />
