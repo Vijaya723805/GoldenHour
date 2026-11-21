@@ -207,7 +207,26 @@ export async function analyzeEvidenceIntake(
       headers: getAuthHeaders(token),
       body: formData,
     });
-    return await res.json();
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      const errorMsg =
+        data?.detail ||
+        (Array.isArray(data?.detail) ? data.detail.map((d: any) => d.msg).join(", ") : null) ||
+        data?.error?.message ||
+        data?.message ||
+        `Server returned HTTP ${res.status}`;
+      return {
+        success: false,
+        error: { message: errorMsg },
+      };
+    }
+
+    return data || {
+      success: false,
+      error: { message: "Empty response from analysis engine" },
+    };
   } catch (err: any) {
     return {
       success: false,

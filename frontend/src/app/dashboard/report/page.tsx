@@ -49,6 +49,15 @@ interface QueuedFile {
   previewUrl: string;
 }
 
+const EXTRACTION_STAGES = [
+  { step: 1, label: "Uploading evidence" },
+  { step: 2, label: "Processing image" },
+  { step: 3, label: "Extracting text using OCR" },
+  { step: 4, label: "Analysing screenshot using Claude Vision" },
+  { step: 5, label: "Validating extracted transaction details" },
+  { step: 6, label: "Displaying extraction results" },
+];
+
 export default function ReportFraudPage() {
   const router = useRouter();
   const { user, token } = useAuth();
@@ -61,8 +70,10 @@ export default function ReportFraudPage() {
 
   // Step 2 & 3: AI Extraction state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [extractionStage, setExtractionStage] = useState<number>(0);
   const [analysisProgress, setAnalysisProgress] = useState("");
   const [intakeResult, setIntakeResult] = useState<IntakeAnalysisResult | null>(null);
+  const stageTimersRef = useRef<NodeJS.Timeout[]>([]);
 
   // Step 4 & 5: Incident Details & Manual Defrauded Amount
   const [amountDefrauded, setAmountDefrauded] = useState<string>("");
@@ -144,18 +155,57 @@ export default function ReportFraudPage() {
       return;
     }
 
+    // Clear previous timers
+    stageTimersRef.current.forEach((t) => clearTimeout(t));
+    stageTimersRef.current = [];
+
     setErrorMsg(null);
     setIsAnalyzing(true);
-    setAnalysisProgress("Uploading evidence screenshots to secure private vault...");
+    setExtractionStage(1);
+    setAnalysisProgress("Uploading evidence screenshots to secure processing engine...");
+
+    // Staged feedback simulation synchronized with analysis
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(2);
+        setAnalysisProgress("Processing original image with orientation and contrast enhancement...");
+      }, 500)
+    );
+
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(3);
+        setAnalysisProgress("Extracting text via Windows Native / PaddleOCR engine...");
+      }, 1200)
+    );
+
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(4);
+        setAnalysisProgress("Analysing screenshot context via Claude Vision...");
+      }, 2000)
+    );
+
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(5);
+        setAnalysisProgress("Validating extracted transaction details & sensitive data redactions...");
+      }, 2800)
+    );
 
     try {
       const filesToUpload = queuedFiles.map((q) => q.file);
-      setAnalysisProgress("Running Claude Vision & OCR extraction across screenshots...");
-      
       const res = await analyzeEvidenceIntake(filesToUpload, token);
+
+      stageTimersRef.current.forEach((t) => clearTimeout(t));
+      stageTimersRef.current = [];
+
       if (!res.success || !res.data) {
         throw new Error(res.error?.message || "Failed to extract incident details from screenshots.");
       }
+
+      setExtractionStage(6);
+      setAnalysisProgress("Displaying extraction results.");
 
       setIntakeResult(res.data);
       setCustomTitle(res.data.incident_title);
@@ -165,10 +215,12 @@ export default function ReportFraudPage() {
         setAmountDefrauded(String(res.data.suggested_amount));
       }
     } catch (err: any) {
+      stageTimersRef.current.forEach((t) => clearTimeout(t));
+      stageTimersRef.current = [];
+      setExtractionStage(0);
       setErrorMsg(err.message || "AI extraction failed. Please try again or re-upload clear screenshots.");
     } finally {
       setIsAnalyzing(false);
-      setAnalysisProgress("");
     }
   };
 
@@ -239,14 +291,27 @@ export default function ReportFraudPage() {
         </div>
       </div>
 
-      {/* Error Message */}
+      {/* Error Message with Retry Action */}
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs sm:text-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
-          <div className="space-y-1">
-            <span className="font-semibold">Attention Required</span>
-            <p className="text-red-700">{errorMsg}</p>
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-bold text-red-900">Extraction Error</span>
+              <p className="text-red-700">{errorMsg}</p>
+            </div>
           </div>
+          {queuedFiles.length > 0 && !isAnalyzing && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleExtractWithAI}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-3.5 py-1.5 shrink-0 flex items-center justify-center gap-1.5 rounded-lg shadow-sm"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry AI Extraction
+            </Button>
+          )}
         </div>
       )}
 
@@ -481,13 +546,55 @@ export default function ReportFraudPage() {
                 </div>
               )}
 
-              {/* Progress Indicator */}
+              {/* Progress Indicator with 6 Sequential Extraction Stages */}
               {isAnalyzing && (
-                <div className="p-4 rounded-xl bg-[#E1F1FB] border border-[#DCE7F0] flex items-center gap-3">
-                  <RefreshCw className="w-5 h-5 text-[#172F4D] animate-spin shrink-0" />
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-[#172F4D]">AI Extraction in Progress</p>
-                    <p className="text-xs text-[#71849A]">{analysisProgress}</p>
+                <div className="p-5 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] space-y-4 shadow-sm animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <RefreshCw className="w-5 h-5 text-[#172F4D] animate-spin shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-[#172F4D]">
+                          AI Evidence Extraction Pipeline Active
+                        </p>
+                        <p className="text-xs text-[#71849A]">
+                          {analysisProgress}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-[#172F4D] bg-white px-3 py-1 rounded-full border border-[#DCE7F0] shrink-0 self-start sm:self-auto shadow-2xs">
+                      Stage {Math.min(extractionStage || 1, 6)} of 6
+                    </span>
+                  </div>
+
+                  {/* 6 Stage Steps Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                    {EXTRACTION_STAGES.map((s) => {
+                      const isComplete = extractionStage > s.step;
+                      const isCurrent = extractionStage === s.step;
+                      return (
+                        <div
+                          key={s.step}
+                          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 transition-all duration-300 ${
+                            isComplete
+                              ? "bg-white border-emerald-300 text-emerald-800 font-medium"
+                              : isCurrent
+                              ? "bg-white border-[#172F4D] text-[#172F4D] font-bold shadow-sm ring-1 ring-[#172F4D]/20"
+                              : "bg-white/50 border-[#DCE7F0] text-[#71849A]"
+                          }`}
+                        >
+                          {isComplete ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          ) : isCurrent ? (
+                            <RefreshCw className="w-4 h-4 text-[#172F4D] animate-spin shrink-0" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border border-[#C8D2DE] flex items-center justify-center text-[10px] text-[#71849A] shrink-0 font-medium">
+                              {s.step}
+                            </div>
+                          )}
+                          <span className="truncate">{s.step}. {s.label}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

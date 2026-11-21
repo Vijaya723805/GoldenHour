@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from app.core.config import settings
 from app.services.validation_service import validation_service
-from app.services.ocr_service import ocr_service
+from app.services.ocr_service import ocr_service, WINSDK_AVAILABLE, PADDLEOCR_AVAILABLE
 
 try:
     import anthropic
@@ -442,10 +442,7 @@ class ClaudeService:
                 item_ben_vpa = None
 
             # Detect phone number in SMS/WhatsApp
-            item_phone = None
-            phone_matches = re.findall(r"(?:(?:\+91|91)[\s-]?)?([6-9]\d{9})\b", raw_summary)
-            if phone_matches:
-                item_phone = f"+91{phone_matches[0]}"
+            item_phone = analysis.get("fraudster_phone")
 
             # Detect category
             cat = analysis.get("detected_category", "UNAUTHORIZED_UPI_DEBIT")

@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
-  logout: async () => {},
+  logout: async () => { },
   updateProfile: async () => ({ success: false }),
 });
 
@@ -79,8 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    const normalizedEmail = email.trim().toLowerCase();
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
       // 1. Supabase Auth if configured
       if (isSupabaseConfigured && supabase) {
         const { data: supaData, error: supaErr } = await supabase.auth.signInWithPassword({
