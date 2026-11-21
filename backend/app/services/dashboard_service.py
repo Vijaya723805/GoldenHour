@@ -1,4 +1,6 @@
 import uuid
+import json
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from app.schemas.dashboard import (
@@ -11,12 +13,72 @@ from app.schemas.dashboard import (
 from app.schemas.evidence import EvidenceItem, EvidenceCategory
 from app.services.storage_service import storage_service
 
+CASES_STORE_FILE = Path(__file__).resolve().parent.parent.parent / "uploads" / "cases_store.json"
+
 
 class DashboardService:
     def __init__(self):
         self._cases: Dict[str, FraudCaseDetail] = {}
         self._evidence: Dict[str, List[EvidenceItem]] = {}
         self._seed_demo_cases()
+        self._load_from_disk()
+
+    def _save_to_disk(self):
+        try:
+            CASES_STORE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            cases_dict = {}
+            for cid, c in self._cases.items():
+                cd = c.dict() if hasattr(c, "dict") else c.model_dump()
+                cases_dict[cid] = cd
+            
+            evidence_dict = {}
+            for cid, ev_list in self._evidence.items():
+                evidence_dict[cid] = [
+                    (e.dict() if hasattr(e, "dict") else e.model_dump())
+                    for e in ev_list
+                ]
+
+            payload = {
+                "cases": cases_dict,
+                "evidence": evidence_dict
+            }
+            with open(CASES_STORE_FILE, "w", encoding="utf-8") as f:
+                json.dump(payload, f, default=str, indent=2)
+        except Exception as e:
+            print(f"[DashboardService] Could not persist cases: {e}")
+
+    def _load_from_disk(self):
+        try:
+            if CASES_STORE_FILE.exists():
+                with open(CASES_STORE_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                raw_cases = data.get("cases", {})
+                for cid, cdata in raw_cases.items():
+                    if isinstance(cdata.get("created_at"), str):
+                        cdata["created_at"] = datetime.fromisoformat(cdata["created_at"])
+                    if isinstance(cdata.get("updated_at"), str):
+                        cdata["updated_at"] = datetime.fromisoformat(cdata["updated_at"])
+                    # Rebuild evidence items inside case
+                    ev_items = []
+                    for e in cdata.get("evidence_items", []):
+                        if isinstance(e.get("created_at"), str):
+                            e["created_at"] = datetime.fromisoformat(e["created_at"])
+                        ev_items.append(EvidenceItem(**e))
+                    cdata["evidence_items"] = ev_items
+                    self._cases[cid] = FraudCaseDetail(**cdata)
+
+                raw_ev = data.get("evidence", {})
+                for cid, ev_list in raw_ev.items():
+                    loaded_items = []
+                    for e in ev_list:
+                        if isinstance(e.get("created_at"), str):
+                            e["created_at"] = datetime.fromisoformat(e["created_at"])
+                        loaded_items.append(EvidenceItem(**e))
+                    self._evidence[cid] = loaded_items
+        except Exception as e:
+            print(f"[DashboardService] Could not load persisted cases: {e}")
+
 
     def _seed_demo_cases(self):
         """Seeds realistic fictional fraud cases and digital evidence for hackathon testing."""
@@ -210,6 +272,33 @@ class DashboardService:
         case_number = f"GH-{datetime.now().year}-{str(uuid.uuid4().int)[:4]}"
         now = datetime.now()
 
+        attached_evidence: List[EvidenceItem] = []
+        if req.evidence_ids:
+            for evid in req.evidence_ids:
+                meta = storage_service.get_evidence_meta(evid)
+                if meta:
+                    cat = meta.get("category") or EvidenceCategory.UPI_RECEIPT
+                    if isinstance(cat, str):
+                        try:
+                            cat = EvidenceCategory(cat)
+                        except Exception:
+                            cat = EvidenceCategory.OTHER
+                    ev_item = EvidenceItem(
+                        id=evid,
+                        case_id=case_id,
+                        file_name=meta.get("original_filename", "evidence.png"),
+                        sanitized_file_name=meta.get("sanitized_filename", f"{evid}.png"),
+                        file_size_bytes=meta.get("file_size", 0),
+                        content_type=meta.get("content_type", "image/png"),
+                        category=cat,
+                        description=f"Evidence for case {case_number}",
+                        storage_location=meta.get("storage_location", "private_vault"),
+                        storage_path=meta.get("local_path", meta.get("storage_path", "")),
+                        created_at=now,
+                        has_preview=True
+                    )
+                    attached_evidence.append(ev_item)
+
         new_case = FraudCaseDetail(
             id=case_id,
             case_number=case_number,
@@ -225,16 +314,18 @@ class DashboardService:
             preferred_language=req.preferred_language,
             contact_phone=req.contact_phone,
             contact_email=req.contact_email,
+            fraudster_phone=req.fraudster_phone,
             status=CaseStatus.REVIEW_PENDING,
             created_at=now,
             updated_at=now,
             golden_hour_active=True,
-            evidence_count=0,
-            evidence_items=[]
+            evidence_count=len(attached_evidence),
+            evidence_items=attached_evidence
         )
 
         self._cases[case_id] = new_case
-        self._evidence[case_id] = []
+        self._evidence[case_id] = attached_evidence
+        self._save_to_disk()
         return new_case
 
     def add_evidence(
@@ -272,6 +363,7 @@ class DashboardService:
         case.evidence_items = self._evidence[case_id]
         case.evidence_count = len(case.evidence_items)
         case.updated_at = datetime.now()
+        self._save_to_disk()
 
         return item
 
@@ -307,6 +399,7 @@ class DashboardService:
         case.evidence_items = self._evidence[case_id]
         case.evidence_count = len(case.evidence_items)
         case.updated_at = datetime.now()
+        self._save_to_disk()
         return True
 
 

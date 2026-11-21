@@ -39,6 +39,7 @@ class FraudCaseDetail(FraudCaseSummary):
     preferred_language: str = "en"
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
+    fraudster_phone: Optional[str] = None
     evidence_items: List[EvidenceItem] = Field(default_factory=list)
 
 
@@ -60,6 +61,9 @@ class CreateCaseRequest(BaseModel):
     transaction_id_utr: Optional[str] = None
     beneficiary_upi_id: Optional[str] = None
     beneficiary_bank: Optional[str] = None
+    fraudster_phone: Optional[str] = None
     preferred_language: str = "en"
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
+    evidence_ids: Optional[List[str]] = Field(default_factory=list)
+

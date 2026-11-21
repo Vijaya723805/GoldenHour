@@ -23,6 +23,24 @@ class TrackingStatus(str, Enum):
     CLOSED = "CLOSED"
 
 
+class ComplaintStatus(str, Enum):
+    NOT_SUBMITTED = "NOT_SUBMITTED"
+    SUBMITTED = "SUBMITTED"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    ACTION_TAKEN = "ACTION_TAKEN"
+    RESOLVED = "RESOLVED"
+    REJECTED_CLOSED = "REJECTED_CLOSED"
+
+
+class StatusHistoryItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(datetime.now().timestamp()))
+    status: str
+    status_label: str
+    note: Optional[str] = None
+    updated_at: datetime = Field(default_factory=datetime.now)
+    updated_by: str = "Citizen Complainant"
+
+
 class EmergencyChecklistItem(BaseModel):
     id: str
     stage: ActionStage
@@ -30,6 +48,8 @@ class EmergencyChecklistItem(BaseModel):
     description: str
     is_completed: bool = False
     completed_at: Optional[datetime] = None
+    completion_source: Optional[str] = None  # "AUTOMATIC" or "MANUAL"
+    is_auto_completable: bool = False
     action_url: Optional[str] = None
     action_label: Optional[str] = None
     category: Optional[str] = None
@@ -50,7 +70,10 @@ class FollowUpNote(BaseModel):
     note_text: str
     author: str = "Citizen Complainant"
     category: str = "General Follow-up"
+    follow_up_date: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: Optional[datetime] = None
+
 
 
 class OfficialLinkItem(BaseModel):
@@ -94,6 +117,9 @@ class CaseTrackingDetail(BaseModel):
     beneficiary_upi_id: Optional[str] = None
     beneficiary_bank: Optional[str] = None
     current_status: TrackingStatus
+    complaint_status: ComplaintStatus = ComplaintStatus.NOT_SUBMITTED
+    complaint_status_updated_at: Optional[datetime] = None
+    status_history: List[StatusHistoryItem] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
     golden_hour_active: bool = False
@@ -124,6 +150,8 @@ class EmergencyDashboardData(BaseModel):
     case_id: str
     case_number: str
     current_status: TrackingStatus
+    complaint_status: ComplaintStatus = ComplaintStatus.NOT_SUBMITTED
+    complaint_status_updated_at: Optional[datetime] = None
     case_created_at: datetime
     golden_hour_active: bool
     amount_lost: float
@@ -144,6 +172,13 @@ class EmergencyDashboardData(BaseModel):
 class AddNoteRequest(BaseModel):
     note_text: str = Field(..., min_length=2, max_length=1500)
     category: Optional[str] = "General Follow-up"
+    follow_up_date: Optional[str] = None
+
+
+class EditNoteRequest(BaseModel):
+    note_text: str = Field(..., min_length=2, max_length=1500)
+    category: Optional[str] = "General Follow-up"
+    follow_up_date: Optional[str] = None
 
 
 class UpdateReferenceNumbersRequest(BaseModel):
@@ -159,5 +194,11 @@ class UpdateTrackingStatusRequest(BaseModel):
     status_change_note: Optional[str] = None
 
 
+class UpdateComplaintStatusRequest(BaseModel):
+    status: ComplaintStatus
+    note: Optional[str] = None
+
+
 class ToggleChecklistItemRequest(BaseModel):
     is_completed: bool
+

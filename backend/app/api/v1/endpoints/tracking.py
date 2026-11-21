@@ -7,8 +7,11 @@ from app.schemas.case_tracking import (
     EmergencyDashboardData,
     OfficialLinkItem,
     AddNoteRequest,
+    EditNoteRequest,
     UpdateReferenceNumbersRequest,
     UpdateTrackingStatusRequest,
+    UpdateComplaintStatusRequest,
+    ComplaintStatus,
     ToggleChecklistItemRequest
 )
 from app.services.case_tracking_service import case_tracking_service, DEFAULT_OFFICIAL_LINKS
@@ -122,6 +125,33 @@ def update_case_status(
     )
 
 
+@router.put("/cases/{case_id}/complaint-status", response_model=ApiResponse[CaseTrackingDetail])
+def update_complaint_status_endpoint(
+    case_id: str,
+    payload: UpdateComplaintStatusRequest,
+    authorization: Optional[str] = Header(None)
+):
+    """
+    Manually updates formal complaint status (ONLY triggered by explicit citizen action).
+    Preserves audit history of all status transitions.
+    """
+    token = extract_token(authorization)
+    user = auth_service.get_current_user(token)
+    victim_id = user.id if user else "user_demo_772"
+
+    tracking = case_tracking_service.update_complaint_status(
+        case_id=case_id,
+        victim_id=victim_id,
+        status=payload.status,
+        note=payload.note
+    )
+    return ApiResponse(
+        success=True,
+        message=f"Complaint status successfully updated to '{payload.status.value}'.",
+        data=tracking
+    )
+
+
 @router.post("/cases/{case_id}/notes", response_model=ApiResponse[CaseTrackingDetail])
 def add_follow_up_note(
     case_id: str,
@@ -140,7 +170,8 @@ def add_follow_up_note(
         case_id=case_id,
         victim_id=victim_id,
         note_text=payload.note_text,
-        category=payload.category or "General Follow-up"
+        category=payload.category or "General Follow-up",
+        follow_up_date=payload.follow_up_date
     )
     return ApiResponse(
         success=True,
@@ -149,6 +180,54 @@ def add_follow_up_note(
     )
 
 
+@router.put("/cases/{case_id}/notes/{note_id}", response_model=ApiResponse[CaseTrackingDetail])
+def edit_follow_up_note(
+    case_id: str,
+    note_id: str,
+    payload: EditNoteRequest,
+    authorization: Optional[str] = Header(None)
+):
+    token = extract_token(authorization)
+    user = auth_service.get_current_user(token)
+    victim_id = user.id if user else "user_demo_772"
+
+    try:
+        tracking = case_tracking_service.edit_follow_up_note(
+            case_id=case_id,
+            victim_id=victim_id,
+            note_id=note_id,
+            new_text=payload.note_text,
+            category=payload.category,
+            follow_up_date=payload.follow_up_date
+        )
+        return ApiResponse(success=True, message="Follow-up note updated.", data=tracking)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.delete("/cases/{case_id}/notes/{note_id}", response_model=ApiResponse[CaseTrackingDetail])
+def delete_follow_up_note(
+    case_id: str,
+    note_id: str,
+    authorization: Optional[str] = Header(None)
+):
+    token = extract_token(authorization)
+    user = auth_service.get_current_user(token)
+    victim_id = user.id if user else "user_demo_772"
+
+    try:
+        tracking = case_tracking_service.delete_follow_up_note(
+            case_id=case_id,
+            victim_id=victim_id,
+            note_id=note_id
+        )
+        return ApiResponse(success=True, message="Follow-up note deleted.", data=tracking)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+
+@router.put("/cases/{case_id}/checklist/{item_id}", response_model=ApiResponse[CaseTrackingDetail])
 @router.post("/cases/{case_id}/checklist/{item_id}/toggle", response_model=ApiResponse[CaseTrackingDetail])
 def toggle_checklist_item(
     case_id: str,

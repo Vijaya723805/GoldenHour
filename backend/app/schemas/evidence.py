@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -57,3 +57,55 @@ class EvidenceAnalysisResponse(BaseModel):
     raw_text_summary: str = ""
     redacted_sensitive_data: bool = True
     security_flags: List[str] = Field(default_factory=list)
+
+
+class ExtractedFieldItem(BaseModel):
+    value: Optional[Any] = None
+    source_screenshot: Optional[str] = None
+    confidence: float = 0.0
+    status: str = "Extracted"  # "Extracted", "Needs Review", "Confirmed by User"
+    verification_note: Optional[str] = None
+
+
+class IntakeScreenshotItem(BaseModel):
+    evidence_id: str
+    file_name: str
+    file_size: int
+    content_type: str
+    category: EvidenceCategory = EvidenceCategory.OTHER
+    storage_path: str = ""
+    extracted_text_summary: str = ""
+    transaction_id_utr: Optional[str] = None
+    amount: Optional[float] = None
+    timestamp: Optional[str] = None
+    sender_upi_id: Optional[str] = None
+    beneficiary_upi_id: Optional[str] = None
+    fraudster_phone: Optional[str] = None
+    beneficiary_bank: Optional[str] = None
+    app_used: Optional[str] = None
+    detected_category: Optional[str] = None
+    is_blurry: bool = False
+    quality_warning: Optional[str] = None
+
+
+class IntakeAnalysisResult(BaseModel):
+    incident_title: str
+    scam_category: str
+    incident_description: str
+    transaction_date_time: Optional[str] = None
+    transaction_id_utr: Optional[str] = None
+    beneficiary_upi_id: Optional[str] = None
+    fraudster_phone: Optional[str] = None
+    suggested_amount: Optional[float] = None
+    app_used: Optional[str] = None
+    beneficiary_bank: Optional[str] = None
+    sender_upi_id: Optional[str] = None
+    beneficiary_name: Optional[str] = None
+    fields: Dict[str, ExtractedFieldItem] = Field(default_factory=dict)
+    missing_fields: List[str] = Field(default_factory=list)
+    conflict_warnings: List[str] = Field(default_factory=list)
+    quality_warnings: List[str] = Field(default_factory=list)
+    debug_diagnostics: Optional[Dict[str, Any]] = None
+    uploaded_evidence: List[IntakeScreenshotItem] = Field(default_factory=list)
+
+

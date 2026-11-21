@@ -24,6 +24,6 @@ def get_health_status():
         },
         ai_services={
             "claude_vision": "configured" if claude_configured else "mock_mode_available",
-            "ocr_engine": "paddleocr" if ocr_service.ocr_engine else "fallback_parser"
+            "ocr_engine": "windows_native_ocr" if getattr(ocr_service, "ocr_engine", None) == "windows_native_ocr" else ("paddleocr" if getattr(ocr_service, "ocr_engine", None) else "native_ocr")
         }
     )

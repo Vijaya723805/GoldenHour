@@ -19,10 +19,19 @@ import {
   Calendar, 
   Phone, 
   Mail, 
-  FolderLock, 
   ArrowRight, 
   Sparkles, 
-  Lock 
+  Lock,
+  RefreshCw,
+  Info,
+  CheckCircle,
+  HelpCircle,
+  AlertTriangle,
+  Terminal,
+  Code2,
+  Copy,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,78 +39,58 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { useAuth } from "@/context/auth-context";
 import { useLanguage } from "@/context/language-context";
-import { createFraudCase, uploadCaseEvidence, deleteCaseEvidence } from "@/lib/api-client";
+import { analyzeEvidenceIntake, createFraudCase } from "@/lib/api-client";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { EvidenceCategory, EvidenceItem, FraudCaseDetail, Language } from "@/types";
+import { IntakeAnalysisResult, FraudCaseDetail } from "@/types";
 
-interface PendingFile {
+interface QueuedFile {
   id: string;
   file: File;
   previewUrl: string;
-  category: EvidenceCategory;
-  description: string;
-  uploadProgress: number;
-  uploadedItem?: EvidenceItem;
-  status: "PENDING" | "UPLOADING" | "SUCCESS" | "ERROR";
-  errorMsg?: string;
 }
 
-const CATEGORY_LABELS: Record<EvidenceCategory, { label: string; desc: string }> = {
-  UPI_RECEIPT: {
-    label: "UPI Transaction Receipt",
-    desc: "PhonePe, Google Pay, Paytm, BHIM screenshot showing debit",
-  },
-  BANK_STATEMENT: {
-    label: "Bank Transaction Screenshot",
-    desc: "Mobile banking app or passbook transaction statement",
-  },
-  SMS_ALERT: {
-    label: "Bank / Phishing SMS Screenshot",
-    desc: "SMS alert received regarding debit or phishing link",
-  },
-  WHATSAPP_CHAT: {
-    label: "WhatsApp / Chat Conversation",
-    desc: "Scammer chat log, Telegram group, or payment request link",
-  },
-  OTHER: {
-    label: "Other Relevant Evidence",
-    desc: "Call recordings, emails, APK download prompts, or web URLs",
-  },
-};
+const EXTRACTION_STAGES = [
+  { step: 1, label: "Uploading evidence" },
+  { step: 2, label: "Processing image" },
+  { step: 3, label: "Extracting text using OCR" },
+  { step: 4, label: "Analysing screenshot using Claude Vision" },
+  { step: 5, label: "Validating extracted transaction details" },
+  { step: 6, label: "Displaying extraction results" },
+];
 
 export default function ReportFraudPage() {
   const router = useRouter();
   const { user, token } = useAuth();
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
 
-  // Form State: Case Details
-  const [title, setTitle] = useState("");
-  const [fraudCategory, setFraudCategory] = useState("PHISHING_PAYMENT_LINK");
-  const [fraudDescription, setFraudDescription] = useState("");
-  const [incidentDate, setIncidentDate] = useState(() => {
-    const now = new Date();
-    return now.toISOString().slice(0, 16);
-  });
-  const [amountLost, setAmountLost] = useState<string>("");
-  const [utrNumber, setUtrNumber] = useState("");
-  const [beneficiaryUpi, setBeneficiaryUpi] = useState("");
-  const [beneficiaryBank, setBeneficiaryBank] = useState("Unknown");
-  const [preferredLang, setPreferredLang] = useState<Language>(language);
-  const [contactPhone, setContactPhone] = useState(user?.phone_number || "");
-  const [contactEmail, setContactEmail] = useState(user?.email || "");
-
-  // Evidence Files Queue
-  const [filesQueue, setFilesQueue] = useState<PendingFile[]>([]);
-  const [defaultCategory, setDefaultCategory] = useState<EvidenceCategory>("UPI_RECEIPT");
+  // Step 1: Upload Screenshots state
+  const [queuedFiles, setQueuedFiles] = useState<QueuedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Submission & Case Creation State
-  const [createdCase, setCreatedCase] = useState<FraudCaseDetail | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  // Step 2 & 3: AI Extraction state
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [extractionStage, setExtractionStage] = useState<number>(0);
+  const [analysisProgress, setAnalysisProgress] = useState("");
+  const [intakeResult, setIntakeResult] = useState<IntakeAnalysisResult | null>(null);
+  const stageTimersRef = useRef<NodeJS.Timeout[]>([]);
 
-  // Full-size Preview Modal
+  // Step 4 & 5: Incident Details & Manual Defrauded Amount
+  const [amountDefrauded, setAmountDefrauded] = useState<string>("");
+  const [customTitle, setCustomTitle] = useState<string>("");
+  const [customDescription, setCustomDescription] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  // Developer Diagnostics State
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [copiedDiagnostics, setCopiedDiagnostics] = useState(false);
+
+  // Step 6: Case Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdCase, setCreatedCase] = useState<FraudCaseDetail | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Image Preview Modal
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const [previewModalName, setPreviewModalName] = useState<string>("");
 
@@ -115,44 +104,31 @@ export default function ReportFraudPage() {
     }
   };
 
-  const validateAndAddFiles = (fileList: FileList | File[]) => {
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "application/pdf"];
+  const handleFilesSelected = (fileList: FileList | File[]) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp", "application/pdf"];
     const maxSizeBytes = 15 * 1024 * 1024;
-
-    const newEntries: PendingFile[] = [];
+    const newItems: QueuedFile[] = [];
 
     Array.from(fileList).forEach((file) => {
-      if (!allowedTypes.includes(file.type.toLowerCase())) {
-        setStatusMsg({
-          type: "error",
-          text: `File "${file.name}" is not supported. Allowed: PNG, JPG, JPEG, WEBP, PDF.`,
-        });
+      if (!allowed.includes(file.type.toLowerCase())) {
+        setErrorMsg(`"${file.name}" is not supported. Supported: PNG, JPG, JPEG, WEBP, PDF.`);
         return;
       }
-
       if (file.size > maxSizeBytes) {
-        setStatusMsg({
-          type: "error",
-          text: `File "${file.name}" exceeds the 15MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB).`,
-        });
+        setErrorMsg(`"${file.name}" exceeds 15MB limit.`);
         return;
       }
-
       const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
-      newEntries.push({
-        id: `pending_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      newItems.push({
+        id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         file,
         previewUrl,
-        category: defaultCategory,
-        description: "",
-        uploadProgress: 0,
-        status: "PENDING",
       });
     });
 
-    if (newEntries.length > 0) {
-      setFilesQueue((prev) => [...prev, ...newEntries]);
-      setStatusMsg(null);
+    if (newItems.length > 0) {
+      setQueuedFiles((prev) => [...prev, ...newItems]);
+      setErrorMsg(null);
     }
   };
 
@@ -161,621 +137,941 @@ export default function ReportFraudPage() {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      validateAndAddFiles(e.dataTransfer.files);
+      handleFilesSelected(e.dataTransfer.files);
     }
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      validateAndAddFiles(e.target.files);
-    }
+  const removeFile = (id: string) => {
+    setQueuedFiles((prev) => {
+      const filtered = prev.filter((item) => item.id !== id);
+      return filtered;
+    });
   };
 
-  const handleRemoveFile = async (item: PendingFile) => {
-    if (createdCase && item.uploadedItem) {
-      try {
-        await deleteCaseEvidence(createdCase.id, item.uploadedItem.id, token);
-      } catch (err) {
-        console.error("Failed to delete file from server:", err);
-      }
-    }
-
-    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
-    setFilesQueue((prev) => prev.filter((f) => f.id !== item.id));
-  };
-
-  const handleCategoryChange = (id: string, newCat: EvidenceCategory) => {
-    setFilesQueue((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, category: newCat } : f))
-    );
-  };
-
-  const handleSubmitCase = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatusMsg(null);
-
-    if (fraudDescription.trim().length < 10) {
-      setStatusMsg({
-        type: "error",
-        text: "Please provide a more detailed fraud description (minimum 10 characters).",
-      });
+  // Trigger AI Extraction on Uploaded Screenshots
+  const handleExtractWithAI = async () => {
+    if (queuedFiles.length === 0) {
+      setErrorMsg("Please select at least one fraud screenshot to analyze.");
       return;
     }
 
-    if (filesQueue.length === 0) {
-      setStatusMsg({
-        type: "error",
-        text: "Please upload at least one piece of digital evidence (receipt, screenshot, or SMS).",
-      });
+    // Clear previous timers
+    stageTimersRef.current.forEach((t) => clearTimeout(t));
+    stageTimersRef.current = [];
+
+    setErrorMsg(null);
+    setIsAnalyzing(true);
+    setExtractionStage(1);
+    setAnalysisProgress("Uploading evidence screenshots to secure processing engine...");
+
+    // Staged feedback simulation synchronized with analysis
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(2);
+        setAnalysisProgress("Processing original image with orientation and contrast enhancement...");
+      }, 500)
+    );
+
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(3);
+        setAnalysisProgress("Extracting text via Windows Native / PaddleOCR engine...");
+      }, 1200)
+    );
+
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(4);
+        setAnalysisProgress("Analysing screenshot context via Claude Vision...");
+      }, 2000)
+    );
+
+    stageTimersRef.current.push(
+      setTimeout(() => {
+        setExtractionStage(5);
+        setAnalysisProgress("Validating extracted transaction details & sensitive data redactions...");
+      }, 2800)
+    );
+
+    try {
+      const filesToUpload = queuedFiles.map((q) => q.file);
+      const res = await analyzeEvidenceIntake(filesToUpload, token);
+
+      stageTimersRef.current.forEach((t) => clearTimeout(t));
+      stageTimersRef.current = [];
+
+      if (!res.success || !res.data) {
+        throw new Error(res.error?.message || "Failed to extract incident details from screenshots.");
+      }
+
+      setExtractionStage(6);
+      setAnalysisProgress("Displaying extraction results.");
+
+      setIntakeResult(res.data);
+      setCustomTitle(res.data.incident_title);
+      setCustomDescription(res.data.incident_description);
+      setSelectedCategory(res.data.scam_category);
+      if (res.data.suggested_amount) {
+        setAmountDefrauded(String(res.data.suggested_amount));
+      }
+    } catch (err: any) {
+      stageTimersRef.current.forEach((t) => clearTimeout(t));
+      stageTimersRef.current = [];
+      setExtractionStage(0);
+      setErrorMsg(err.message || "AI extraction failed. Please try again or re-upload clear screenshots.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Submit Fraud Case
+  const handleSubmitCase = async () => {
+    if (!intakeResult) {
+      setErrorMsg("Please upload screenshots and run AI extraction first.");
+      return;
+    }
+
+    const numAmount = parseFloat(amountDefrauded);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setErrorMsg("Please enter the valid defrauded amount (INR) debited from your account.");
       return;
     }
 
     setIsSubmitting(true);
+    setErrorMsg(null);
 
     try {
-      const caseRes = await createFraudCase(
-        {
-          title: title || `${fraudCategory.replace(/_/g, " ")} Incident`,
-          fraud_category: fraudCategory,
-          fraud_description: fraudDescription,
-          incident_date: incidentDate,
-          amount_lost: parseFloat(amountLost) || 0.0,
-          transaction_id_utr: utrNumber.trim() || undefined,
-          beneficiary_upi_id: beneficiaryUpi.trim() || undefined,
-          beneficiary_bank: beneficiaryBank.trim() || undefined,
-          preferred_language: preferredLang,
-          contact_phone: contactPhone.trim() || undefined,
-          contact_email: contactEmail.trim() || undefined,
-        },
-        token
-      );
+      const evidenceIds = intakeResult.uploaded_evidence.map((e) => e.evidence_id);
+      const payload = {
+        title: customTitle || intakeResult.incident_title,
+        fraud_category: selectedCategory || intakeResult.scam_category,
+        fraud_description: customDescription || intakeResult.incident_description,
+        incident_date: intakeResult.transaction_date_time || new Date().toISOString(),
+        amount_lost: numAmount,
+        transaction_id_utr: intakeResult.transaction_id_utr || undefined,
+        beneficiary_upi_id: intakeResult.beneficiary_upi_id || undefined,
+        beneficiary_bank: intakeResult.beneficiary_bank || undefined,
+        fraudster_phone: intakeResult.fraudster_phone || undefined,
+        preferred_language: user?.preferred_language || "en",
+        contact_phone: user?.phone_number || "",
+        contact_email: user?.email || "",
+        evidence_ids: evidenceIds,
+      };
 
-      if (!caseRes.success || !caseRes.data) {
-        throw new Error(caseRes.error?.message || "Failed to initialize fraud incident case.");
+      const res = await createFraudCase(payload, token);
+      if (!res.success || !res.data) {
+        throw new Error(res.error?.message || "Failed to create fraud case.");
       }
 
-      const newCase = caseRes.data;
-      setCreatedCase(newCase);
-
-      const updatedQueue = [...filesQueue];
-      for (let i = 0; i < updatedQueue.length; i++) {
-        const item = updatedQueue[i];
-        item.status = "UPLOADING";
-        item.uploadProgress = 30;
-        setFilesQueue([...updatedQueue]);
-
-        try {
-          const uploadRes = await uploadCaseEvidence(
-            newCase.id,
-            item.file,
-            item.category,
-            item.description,
-            token
-          );
-
-          if (uploadRes.success && uploadRes.data) {
-            item.status = "SUCCESS";
-            item.uploadProgress = 100;
-            item.uploadedItem = uploadRes.data;
-          } else {
-            item.status = "ERROR";
-            item.errorMsg = uploadRes.error?.message || "Upload failed";
-          }
-        } catch (err: any) {
-          item.status = "ERROR";
-          item.errorMsg = err.message || "Upload error";
-        }
-
-        setFilesQueue([...updatedQueue]);
-      }
-
-      setStatusMsg({
-        type: "success",
-        text: `Fraud case "${newCase.case_number}" registered successfully with ${filesQueue.length} evidence file(s) safely stored!`,
-      });
+      setCreatedCase(res.data);
     } catch (err: any) {
-      setStatusMsg({
-        type: "error",
-        text: err.message || "An error occurred while creating case.",
-      });
+      setErrorMsg(err.message || "Failed to create fraud case. Please check connection.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-8 max-w-5xl animate-fadeIn pb-12">
-      {/* Page Header */}
+    <div className="space-y-8 max-w-5xl mx-auto animate-fadeIn pb-16">
+      {/* Top Banner / Heading */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] tracking-tight">
-              Report a Fraud Incident
-            </h1>
-            <Badge variant="default">Module 2: Evidence Vault</Badge>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#172F4D] tracking-tight">
+            Report a Fraud Incident
+          </h1>
           <p className="text-xs sm:text-sm text-[#71849A] mt-1">
-            Secure digital evidence intake. Upload receipts, SMS, and WhatsApp chats to freeze fraudulent recipient accounts.
+            Upload screenshots of your UPI receipts, bank debits, or scammer chats. Our AI extracts transaction parameters automatically.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-[#E1F1FB] text-[#172F4D] border-[#DCE7F0] px-3 py-1 flex items-center gap-1.5 font-semibold text-xs">
+            <Clock className="w-3.5 h-3.5 text-[#172F4D]" />
+            Golden Hour Protocol Active
+          </Badge>
         </div>
       </div>
 
-      {statusMsg && (
-        <Alert variant={statusMsg.type === "success" ? "success" : "danger"}>
-          {statusMsg.text}
-        </Alert>
+      {/* Error Message with Retry Action */}
+      {errorMsg && (
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-bold text-red-900">Extraction Error</span>
+              <p className="text-red-700">{errorMsg}</p>
+            </div>
+          </div>
+          {queuedFiles.length > 0 && !isAnalyzing && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleExtractWithAI}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-3.5 py-1.5 shrink-0 flex items-center justify-center gap-1.5 rounded-lg shadow-sm"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry AI Extraction
+            </Button>
+          )}
+        </div>
       )}
 
-      {/* Case Creation & Ingestion Form */}
-      <form onSubmit={handleSubmitCase} className="space-y-8">
-        {/* Section 1: Incident Particulars & Victim Inputs */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>1. Incident Particulars & Victim Details</CardTitle>
-              <Badge variant="outline">Case Information</Badge>
-            </div>
-            <CardDescription>
-              Provide basic information about the fraud incident. These details will be associated with all uploaded evidence.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Incident Title / Headline *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Unauthorized GPay transfer after scanning OLX QR code"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] placeholder-[#8CA0B3] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                />
+      {/* Case Created Success Card */}
+      {createdCase ? (
+        <Card className="border-[#DCE7F0] shadow-sm bg-white overflow-hidden">
+          <div className="bg-[#E1F1FB] p-6 border-b border-[#DCE7F0]">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#172F4D] flex items-center justify-center text-white">
+                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Scam Category *
-                </label>
-                <select
-                  value={fraudCategory}
-                  onChange={(e) => setFraudCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                >
-                  <option value="PHISHING_PAYMENT_LINK">Phishing Payment Link</option>
-                  <option value="FAKE_QR_SCAM">Fake QR Code Scam</option>
-                  <option value="BANK_OR_OFFICIAL_IMPERSONATION">Bank / Police Impersonation</option>
-                  <option value="LOTTERY_REWARD_SCAM">Lottery / Cashback Reward</option>
-                  <option value="REMOTE_ACCESS_APP">Remote Access App (AnyDesk/TeamViewer)</option>
-                  <option value="MARKETPLACE_ADVANCE_FEE">OLX / Marketplace Advance Fee</option>
-                  <option value="UNAUTHORIZED_DEBIT">Unauthorized Debit / SIM Swap</option>
-                  <option value="OTHER">Other UPI Cyber Fraud</option>
-                </select>
+                <h3 className="text-lg font-bold text-[#172F4D]">
+                  Fraud Case Registered Successfully
+                </h3>
+                <p className="text-xs text-[#71849A]">
+                  Case Reference: <span className="font-semibold text-[#172F4D]">{createdCase.case_number}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          <CardContent className="p-6 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">Amount Defrauded</span>
+                <span className="text-base font-bold text-[#172F4D] mt-1 block">
+                  {formatCurrency(createdCase.amount_lost)}
+                </span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">12-Digit UTR</span>
+                <span className="text-sm font-bold text-[#172F4D] mt-1 block font-mono">
+                  {createdCase.transaction_id_utr || "Pending Bank Verify"}
+                </span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">Beneficiary UPI VPA</span>
+                <span className="text-sm font-semibold text-[#172F4D] mt-1 block truncate">
+                  {createdCase.beneficiary_upi_id || "Not Found"}
+                </span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                <span className="text-[11px] font-medium text-[#71849A] uppercase tracking-wider block">Evidence Files Attached</span>
+                <span className="text-base font-bold text-[#172F4D] mt-1 block">
+                  {createdCase.evidence_count} file(s)
+                </span>
               </div>
             </div>
 
-            {/* Description */}
-            <div>
-              <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                Detailed Fraud Incident Description *
-              </label>
-              <textarea
-                required
-                rows={3}
-                placeholder="Describe how you were contacted, what instructions the fraudster gave, what apps were opened, and how the unauthorized debit occurred..."
-                value={fraudDescription}
-                onChange={(e) => setFraudDescription(e.target.value)}
-                className="w-full p-3 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] placeholder-[#8CA0B3] focus:outline-none focus:border-[#172F4D] focus:bg-white leading-relaxed transition-colors"
-              />
-              <p className="text-[11px] text-[#71849A] mt-1">
-                Minimum 10 characters. Include any specific names, phone numbers, or threats used by the scammer.
-              </p>
-            </div>
-
-            {/* Incident Date, Amount, UTR, Beneficiary */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
               <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Approximate Date & Time *
-                </label>
-                <input
-                  type="datetime-local"
-                  required
-                  value={incidentDate}
-                  onChange={(e) => setIncidentDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white font-mono transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Amount Defrauded (INR)
-                </label>
-                <input
-                  type="number"
-                  placeholder="24500"
-                  value={amountLost}
-                  onChange={(e) => setAmountLost(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-red-600 font-mono font-bold focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  12-Digit UTR / Ref Number
-                </label>
-                <input
-                  type="text"
-                  maxLength={12}
-                  placeholder="e.g. 412890563412"
-                  value={utrNumber}
-                  onChange={(e) => setUtrNumber(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] font-mono font-bold focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Beneficiary (Fraudster VPA)
-                </label>
-                <input
-                  type="text"
-                  placeholder="fraudster@ybl"
-                  value={beneficiaryUpi}
-                  onChange={(e) => setBeneficiaryUpi(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] font-mono focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                />
+                <p className="font-semibold text-amber-900">Next Step: Execute the 3-Stage Emergency Response Checklist</p>
+                <p className="text-amber-800 text-xs mt-1">
+                  Contact the 1930 Cybercrime Helpline immediately and notify your bank branch to request a lien freeze on the beneficiary account before the Golden Hour expires.
+                </p>
               </div>
             </div>
 
-            {/* Language & Contact */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#DCE7F0]">
-              <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Preferred Language
-                </label>
-                <select
-                  value={preferredLang}
-                  onChange={(e) => setPreferredLang(e.target.value as Language)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                >
-                  <option value="en">English</option>
-                  <option value="te">తెలుగు (Telugu)</option>
-                  <option value="hi">हिन्दी (Hindi)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Complainant Contact Mobile
-                </label>
-                <input
-                  type="tel"
-                  placeholder="+919876543210"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] font-mono focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#172F4D] mb-1.5">
-                  Complainant Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="victim@example.com"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-xs text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
-                />
-              </div>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                onClick={() => router.push("/dashboard/emergency")}
+                className="w-full sm:w-auto bg-[#172F4D] hover:bg-[#263F61] text-white font-semibold px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-sm"
+              >
+                Open Emergency Response & Case Tracking
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/dashboard/cases/${createdCase.id}`)}
+                className="w-full sm:w-auto border-[#DCE7F0] text-[#172F4D] hover:bg-[#F1F6FB] px-6 py-2.5 rounded-xl font-medium"
+              >
+                View Case Dossier
+              </Button>
             </div>
           </CardContent>
         </Card>
-
-        {/* Section 2: Drag-and-Drop Digital Evidence Ingestion */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>2. Digital Evidence Vault Ingestion</CardTitle>
-                <CardDescription>
-                  Upload digital proofs: UPI receipts, SMS notifications, and WhatsApp chats. Multiple files supported.
-                </CardDescription>
+      ) : (
+        <>
+          {/* STEP 1: SCREENSHOT UPLOAD AS MAIN INPUT */}
+          <Card className="border-[#DCE7F0] shadow-sm bg-white overflow-hidden">
+            <CardHeader className="bg-[#F1F6FB]/70 border-b border-[#DCE7F0] pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-[#172F4D] text-white flex items-center justify-center font-bold text-sm">
+                    1
+                  </div>
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-bold text-[#172F4D]">
+                      Upload Fraud Screenshots & Evidence
+                    </CardTitle>
+                    <CardDescription className="text-xs text-[#71849A]">
+                      Main Input: Upload UPI payment receipts, bank debit SMS, or WhatsApp conversations.
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge className="bg-white text-[#172F4D] border-[#DCE7F0] text-[11px] font-semibold">
+                  Primary Input
+                </Badge>
               </div>
-              <Badge variant="gold">Private Encrypted Storage</Badge>
-            </div>
-          </CardHeader>
+            </CardHeader>
 
-          <CardContent className="space-y-6">
-            {/* Category selection */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0]">
-              <span className="text-xs font-semibold text-[#172F4D]">
-                Default Evidence Category for Next Upload:
-              </span>
-              <select
-                value={defaultCategory}
-                onChange={(e) => setDefaultCategory(e.target.value as EvidenceCategory)}
-                className="bg-white border border-[#DCE7F0] rounded-xl px-3 py-1.5 text-xs text-[#172F4D] font-bold focus:outline-none focus:border-[#172F4D] shadow-sm"
+            <CardContent className="p-6 space-y-6">
+              {/* Drag and Drop Zone */}
+              <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center cursor-pointer transition-all duration-200 ${
+                  dragActive
+                    ? "border-[#172F4D] bg-[#E1F1FB]"
+                    : "border-[#DCE7F0] hover:border-[#172F4D] bg-[#F1F6FB]/40 hover:bg-[#E1F1FB]/30"
+                }`}
               >
-                <option value="UPI_RECEIPT">UPI Transaction Receipt</option>
-                <option value="BANK_STATEMENT">Bank Statement / Debit Screenshot</option>
-                <option value="SMS_ALERT">SMS Notification / Bank Alert</option>
-                <option value="WHATSAPP_CHAT">WhatsApp / Social Media Chat</option>
-                <option value="OTHER">Other Digital Evidence</option>
-              </select>
-            </div>
-
-            {/* Drag & Drop Upload Zone */}
-            <div
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
-                dragActive
-                  ? "border-[#172F4D] bg-[#E1F1FB] scale-[1.01]"
-                  : "border-[#DCE7F0] bg-[#F1F6FB] hover:border-[#172F4D] hover:bg-[#E1F1FB]/40"
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
-                className="hidden"
-                onChange={handleFileInputChange}
-              />
-
-              <div className="flex flex-col items-center justify-center space-y-3">
-                <div className="p-3.5 bg-[#E1F1FB] text-[#172F4D] rounded-2xl border border-[#DCE7F0] shadow-sm">
-                  <UploadCloud className="w-8 h-8 text-[#172F4D]" />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files) handleFilesSelected(e.target.files);
+                  }}
+                />
+                <div className="w-14 h-14 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] flex items-center justify-center mx-auto mb-4 text-[#172F4D]">
+                  <UploadCloud className="w-7 h-7 text-[#172F4D]" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-[#172F4D]">
-                    Click to browse or drag & drop evidence screenshots here
-                  </p>
-                  <p className="text-xs text-[#71849A] mt-1">
-                    PNG, JPG, JPEG, WEBP or PDF (Max 15MB each). Multiple files permitted.
-                  </p>
+                <h3 className="text-sm sm:text-base font-bold text-[#172F4D]">
+                  Drop fraud screenshots here, or click to browse
+                </h3>
+                <p className="text-xs text-[#71849A] mt-1 max-w-md mx-auto">
+                  Supports PhonePe, Google Pay, Paytm, BHIM, bank statements, SMS alerts, and WhatsApp chat screenshots (PNG, JPG, PDF up to 15MB).
+                </p>
+                <div className="flex items-center justify-center gap-4 mt-4 text-[11px] text-[#71849A]">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> End-to-End Encrypted
+                  </span>
+                  <span>•</span>
+                  <span>Zero Credentials Stored</span>
+                  <span>•</span>
+                  <span>Automatic Redaction</span>
                 </div>
               </div>
-            </div>
 
-            {/* Evidence Files Queue / Thumbnails */}
-            {filesQueue.length > 0 && (
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between border-b border-[#DCE7F0] pb-2">
-                  <span className="text-xs font-semibold text-[#172F4D]">
-                    Uploaded Evidence Queue ({filesQueue.length} files)
-                  </span>
-                  <span className="text-[11px] text-[#71849A] font-mono">
-                    Total: {(filesQueue.reduce((acc, f) => acc + f.file.size, 0) / (1024 * 1024)).toFixed(2)} MB
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {filesQueue.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-3 rounded-2xl bg-[#F1F6FB] border border-[#DCE7F0] flex items-start gap-3 relative group"
+              {/* Uploaded Files Queue Preview */}
+              {queuedFiles.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-[#172F4D] uppercase tracking-wider">
+                      Selected Evidence Files ({queuedFiles.length})
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setQueuedFiles([])}
+                      className="text-xs text-red-600 hover:text-red-700 font-medium"
                     >
-                      {/* Thumbnail or File Icon */}
-                      <div className="w-16 h-16 rounded-xl bg-white border border-[#DCE7F0] flex items-center justify-center overflow-hidden shrink-0 relative shadow-sm">
+                      Clear all
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {queuedFiles.map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-3 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] flex items-center gap-3 relative group"
+                      >
                         {item.previewUrl ? (
-                          <img
-                            src={item.previewUrl}
-                            alt={item.file.name}
-                            className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                          <div
                             onClick={() => {
                               setPreviewModalUrl(item.previewUrl);
                               setPreviewModalName(item.file.name);
                             }}
-                          />
-                        ) : (
-                          <FileText className="w-7 h-7 text-[#172F4D]" />
-                        )}
-
-                        {item.previewUrl && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPreviewModalUrl(item.previewUrl);
-                              setPreviewModalName(item.file.name);
-                            }}
-                            className="absolute inset-0 bg-[#172F4D]/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                            className="w-12 h-12 rounded-lg bg-white border border-[#DCE7F0] overflow-hidden shrink-0 cursor-pointer relative"
                           >
-                            <Eye className="w-4 h-4 text-white" />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Details & Controls */}
-                      <div className="flex-1 min-w-0 space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between">
-                          <p className="font-semibold text-[#172F4D] truncate max-w-[180px]">
-                            {item.file.name}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFile(item)}
-                            className="text-[#71849A] hover:text-red-600 p-1 rounded transition-colors"
-                            title="Remove evidence"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        <p className="text-[11px] text-[#71849A] font-mono">
-                          {(item.file.size / 1024).toFixed(1)} KB • {item.file.type.split("/")[1]?.toUpperCase() || "BIN"}
-                        </p>
-
-                        <div>
-                          <select
-                            value={item.category}
-                            onChange={(e) => handleCategoryChange(item.id, e.target.value as EvidenceCategory)}
-                            className="w-full bg-white border border-[#DCE7F0] rounded-lg px-2 py-1 text-[11px] text-[#172F4D] font-medium focus:outline-none"
-                          >
-                            {Object.entries(CATEGORY_LABELS).map(([catKey, catVal]) => (
-                              <option key={catKey} value={catKey}>
-                                {catVal.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {item.status === "UPLOADING" && (
-                          <div className="w-full bg-white rounded-full h-1.5 overflow-hidden">
-                            <div
-                              className="bg-[#172F4D] h-full transition-all duration-300"
-                              style={{ width: `${item.uploadProgress}%` }}
+                            <img
+                              src={item.previewUrl}
+                              alt={item.file.name}
+                              className="w-full h-full object-cover"
                             />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <Eye className="w-3.5 h-3.5 text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-[#E1F1FB] border border-[#DCE7F0] flex items-center justify-center shrink-0 text-[#172F4D]">
+                            <FileText className="w-5 h-5 text-[#172F4D]" />
                           </div>
                         )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[#172F4D] truncate">
+                            {item.file.name}
+                          </p>
+                          <p className="text-[11px] text-[#71849A]">
+                            {(item.file.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(item.id)}
+                          className="p-1.5 rounded-lg hover:bg-white text-[#71849A] hover:text-red-600 transition-colors"
+                          title="Remove file"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
 
-                        {item.status === "SUCCESS" && (
-                          <span className="text-[10px] text-emerald-700 flex items-center gap-1 font-medium">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Encrypted & Associated with Case
+                  {/* Extract with AI Action Button */}
+                  <div className="pt-3">
+                    <Button
+                      type="button"
+                      disabled={isAnalyzing}
+                      onClick={handleExtractWithAI}
+                      className="w-full sm:w-auto bg-[#172F4D] hover:bg-[#263F61] text-white font-semibold px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Analyzing Screenshots with AI...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 text-sky-300" />
+                          Extract Fraud Details with AI
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Progress Indicator with 6 Sequential Extraction Stages */}
+              {isAnalyzing && (
+                <div className="p-5 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] space-y-4 shadow-sm animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <RefreshCw className="w-5 h-5 text-[#172F4D] animate-spin shrink-0" />
+                      <div>
+                        <p className="text-sm font-bold text-[#172F4D]">
+                          AI Evidence Extraction Pipeline Active
+                        </p>
+                        <p className="text-xs text-[#71849A]">
+                          {analysisProgress}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-semibold text-[#172F4D] bg-white px-3 py-1 rounded-full border border-[#DCE7F0] shrink-0 self-start sm:self-auto shadow-2xs">
+                      Stage {Math.min(extractionStage || 1, 6)} of 6
+                    </span>
+                  </div>
+
+                  {/* 6 Stage Steps Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
+                    {EXTRACTION_STAGES.map((s) => {
+                      const isComplete = extractionStage > s.step;
+                      const isCurrent = extractionStage === s.step;
+                      return (
+                        <div
+                          key={s.step}
+                          className={`p-2.5 rounded-xl border text-xs flex items-center gap-2.5 transition-all duration-300 ${
+                            isComplete
+                              ? "bg-white border-emerald-300 text-emerald-800 font-medium"
+                              : isCurrent
+                              ? "bg-white border-[#172F4D] text-[#172F4D] font-bold shadow-sm ring-1 ring-[#172F4D]/20"
+                              : "bg-white/50 border-[#DCE7F0] text-[#71849A]"
+                          }`}
+                        >
+                          {isComplete ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          ) : isCurrent ? (
+                            <RefreshCw className="w-4 h-4 text-[#172F4D] animate-spin shrink-0" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full border border-[#C8D2DE] flex items-center justify-center text-[10px] text-[#71849A] shrink-0 font-medium">
+                              {s.step}
+                            </div>
+                          )}
+                          <span className="truncate">{s.step}. {s.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* STEP 2: EXTRACTED INCIDENT DETAILS (AUTO-FILLED BY AI) */}
+          {intakeResult && (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Conflict Warnings Banner */}
+              {intakeResult.conflict_warnings && intakeResult.conflict_warnings.length > 0 && (
+                <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs sm:text-sm flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-red-900">
+                      Cross-Evidence Discrepancy Detected
+                    </p>
+                    {intakeResult.conflict_warnings.map((cw, idx) => (
+                      <p key={idx} className="text-red-800 text-xs font-medium">
+                        • {cw}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quality / Low-Resolution Warnings */}
+              {intakeResult.quality_warnings && intakeResult.quality_warnings.length > 0 && (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 shrink-0 text-amber-600 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-amber-900">
+                      Evidence Quality Notice
+                    </p>
+                    {intakeResult.quality_warnings.map((qw, idx) => (
+                      <p key={idx} className="text-amber-800 text-xs">
+                        • {qw}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing Information Warning Banner */}
+              {intakeResult.missing_fields && intakeResult.missing_fields.length > 0 && (
+                <div className="p-4 rounded-xl bg-[#E1F1FB] border border-[#BCE1F8] text-[#172F4D] text-xs sm:text-sm flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 shrink-0 text-[#477DA8] mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold text-[#172F4D]">
+                      Missing Evidence Notice
+                    </p>
+                    <p className="text-[#477DA8] text-xs">
+                      The following field(s) were not detected in the uploaded evidence:{" "}
+                      <span className="font-semibold text-[#172F4D]">{intakeResult.missing_fields.join(", ")}</span>.
+                      You may upload additional receipts or proceed with bank verification.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Extracted Details Card */}
+              <Card className="border-[#DCE7F0] shadow-sm bg-white overflow-hidden">
+                <CardHeader className="bg-[#F1F6FB]/70 border-b border-[#DCE7F0] pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-[#172F4D] text-white flex items-center justify-center font-bold text-sm">
+                        2
+                      </div>
+                      <div>
+                        <CardTitle className="text-base sm:text-lg font-bold text-[#172F4D]">
+                          AI-Extracted Incident Details
+                        </CardTitle>
+                        <CardDescription className="text-xs text-[#71849A]">
+                          Extracted from {intakeResult.uploaded_evidence.length} evidence file(s). Review parameters below.
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[11px] font-semibold flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3 text-emerald-600" />
+                      AI Extracted
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-6 space-y-6">
+                  {/* Grid of Key Technical Parameters */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {/* 12-Digit UTR */}
+                    <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider">
+                            12-Digit UTR
                           </span>
-                        )}
-
-                        {item.status === "ERROR" && (
-                          <span className="text-[10px] text-red-600 flex items-center gap-1 font-medium">
-                            <AlertCircle className="w-3 h-3" /> {item.errorMsg}
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            intakeResult.fields?.transaction_id_utr?.status === "Extracted" || intakeResult.transaction_id_utr
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-amber-100 text-amber-800 border border-amber-200"
+                          }`}>
+                            {intakeResult.fields?.transaction_id_utr?.status || (intakeResult.transaction_id_utr ? "Extracted" : "Needs Review")}
+                          </span>
+                        </div>
+                        {intakeResult.transaction_id_utr ? (
+                          <span className="text-sm font-bold text-[#172F4D] mt-1 block font-mono">
+                            {intakeResult.transaction_id_utr}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[#71849A] italic mt-1 block">
+                            Not found in uploaded evidence
                           </span>
                         )}
                       </div>
+                      {intakeResult.fields?.transaction_id_utr?.source_screenshot && (
+                        <span className="text-[10px] text-[#71849A] mt-2 block truncate">
+                          Source: {intakeResult.fields.transaction_id_utr.source_screenshot}
+                        </span>
+                      )}
                     </div>
-                  ))}
+
+                    {/* Beneficiary UPI VPA */}
+                    <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider">
+                            Beneficiary UPI VPA
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            intakeResult.fields?.beneficiary_upi_id?.status === "Extracted" || intakeResult.beneficiary_upi_id
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-amber-100 text-amber-800 border border-amber-200"
+                          }`}>
+                            {intakeResult.fields?.beneficiary_upi_id?.status || (intakeResult.beneficiary_upi_id ? "Extracted" : "Needs Review")}
+                          </span>
+                        </div>
+                        {intakeResult.beneficiary_upi_id ? (
+                          <span className="text-sm font-bold text-[#172F4D] mt-1 block font-mono truncate">
+                            {intakeResult.beneficiary_upi_id}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[#71849A] italic mt-1 block">
+                            Not found in uploaded evidence
+                          </span>
+                        )}
+                      </div>
+                      {intakeResult.fields?.beneficiary_upi_id?.source_screenshot && (
+                        <span className="text-[10px] text-[#71849A] mt-2 block truncate">
+                          Source: {intakeResult.fields.beneficiary_upi_id.source_screenshot}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Fraudster Phone Number */}
+                    <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider">
+                            Fraudster Phone
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            intakeResult.fields?.fraudster_phone?.status === "Extracted" || intakeResult.fraudster_phone
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-amber-100 text-amber-800 border border-amber-200"
+                          }`}>
+                            {intakeResult.fields?.fraudster_phone?.status || (intakeResult.fraudster_phone ? "Extracted" : "Needs Review")}
+                          </span>
+                        </div>
+                        {intakeResult.fraudster_phone ? (
+                          <span className="text-sm font-bold text-[#172F4D] mt-1 block font-mono">
+                            {intakeResult.fraudster_phone}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[#71849A] italic mt-1 block">
+                            Not found in uploaded evidence
+                          </span>
+                        )}
+                      </div>
+                      {intakeResult.fields?.fraudster_phone?.source_screenshot && (
+                        <span className="text-[10px] text-[#71849A] mt-2 block truncate">
+                          Source: {intakeResult.fields.fraudster_phone.source_screenshot}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Scam Category */}
+                    <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                      <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider block mb-1.5">
+                        Scam Category
+                      </span>
+                      <select
+                        value={selectedCategory || intakeResult.scam_category}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#DCE7F0] text-xs font-semibold text-[#172F4D] focus:outline-none focus:border-[#172F4D]"
+                      >
+                        <option value="PHISHING_PAYMENT_LINK">Phishing Payment Link</option>
+                        <option value="FAKE_QR_SCAM">Fake QR Code Scam</option>
+                        <option value="UPI_COLLECT_REQUEST_FRAUD">UPI Collect Request Fraud</option>
+                        <option value="IMPERSONATION_SCAM">Bank / Official Impersonation</option>
+                        <option value="REMOTE_ACCESS_APP_SCAM">Remote Access App Scam</option>
+                        <option value="UNAUTHORIZED_UPI_DEBIT">Unauthorized UPI Debit</option>
+                        <option value="NEEDS_CLASSIFICATION">Needs Classification</option>
+                      </select>
+                    </div>
+
+                    {/* Transaction App / Mode */}
+                    <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                      <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider block">
+                        Payment App / Channel
+                      </span>
+                      <span className="text-xs font-semibold text-[#172F4D] mt-1.5 block">
+                        {intakeResult.app_used || "UPI App"}
+                      </span>
+                      {intakeResult.fields?.app_used?.source_screenshot && (
+                        <span className="text-[10px] text-[#71849A] mt-1.5 block truncate">
+                          Source: {intakeResult.fields.app_used.source_screenshot}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Transaction Timestamp */}
+                    <div className="p-4 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0]">
+                      <span className="text-[11px] font-bold text-[#71849A] uppercase tracking-wider block">
+                        Transaction Date & Time
+                      </span>
+                      <span className="text-xs font-semibold text-[#172F4D] mt-1.5 block">
+                        {intakeResult.transaction_date_time
+                          ? formatDateTime(intakeResult.transaction_date_time)
+                          : "Not found in evidence"}
+                      </span>
+                      {intakeResult.fields?.transaction_date_time?.source_screenshot && (
+                        <span className="text-[10px] text-[#71849A] mt-1.5 block truncate">
+                          Source: {intakeResult.fields.transaction_date_time.source_screenshot}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Incident Title & Description (Editable) */}
+                  <div className="space-y-4 pt-2">
+                    <div>
+                      <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider mb-1.5">
+                        Incident Headline
+                      </label>
+                      <input
+                        type="text"
+                        value={customTitle}
+                        onChange={(e) => setCustomTitle(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] font-medium focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider mb-1.5">
+                        Detailed Incident Narrative
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={customDescription}
+                        onChange={(e) => setCustomDescription(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-sm text-[#172F4D] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Developer / AI Extraction Diagnostics Accordion */}
+              <div className="border border-[#DCE7F0] rounded-xl bg-white overflow-hidden shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setShowDiagnostics(!showDiagnostics)}
+                  className="w-full px-4 py-3 bg-[#F1F6FB] hover:bg-[#E5F0F8] text-xs font-bold text-[#172F4D] flex items-center justify-between transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-[#172F4D]" />
+                    <span>AI Extraction Diagnostics & Pipeline Inspection</span>
+                    <Badge className="bg-white text-[#172F4D] border-[#DCE7F0] text-[10px]">Debug View</Badge>
+                  </div>
+                  {showDiagnostics ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {showDiagnostics && (
+                  <div className="p-4 sm:p-5 space-y-4 bg-white border-t border-[#DCE7F0] text-xs">
+                    {/* Pipeline Summary Cards */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-2.5 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0]">
+                        <span className="text-[10px] text-[#71849A] block uppercase font-semibold">OCR Engine</span>
+                        <span className="text-xs font-mono font-bold text-[#172F4D]">
+                          {intakeResult.debug_diagnostics?.engine_used || "windows_native_ocr"}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0]">
+                        <span className="text-[10px] text-[#71849A] block uppercase font-semibold">Claude Vision API</span>
+                        <span className="text-xs font-mono font-bold text-[#172F4D]">
+                          {intakeResult.debug_diagnostics?.claude_vision_active ? "Live API (Active)" : "Offline (Local OCR)"}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0]">
+                        <span className="text-[10px] text-[#71849A] block uppercase font-semibold">Extracted Parameters</span>
+                        <span className="text-xs font-mono font-bold text-[#172F4D]">
+                          {intakeResult.debug_diagnostics?.extracted_parameters_count ?? 0} Detected
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#F1F6FB] border border-[#DCE7F0]">
+                        <span className="text-[10px] text-[#71849A] block uppercase font-semibold">Evidence Files</span>
+                        <span className="text-xs font-mono font-bold text-[#172F4D]">
+                          {intakeResult.uploaded_evidence.length} File(s)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Raw Sanitized OCR Text Preview */}
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] font-bold text-[#172F4D] uppercase tracking-wider block">
+                        Sanitized OCR Text Preview:
+                      </span>
+                      <div className="p-3 rounded-lg bg-[#0F172A] text-emerald-400 font-mono text-[11px] max-h-36 overflow-y-auto whitespace-pre-wrap">
+                        {intakeResult.debug_diagnostics?.ocr_text_preview || "No text preview available."}
+                      </div>
+                    </div>
+
+                    {/* Structured Extraction JSON Viewer */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-[#172F4D] uppercase tracking-wider">
+                          Structured JSON Response:
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            navigator.clipboard.writeText(JSON.stringify(intakeResult, null, 2));
+                            setCopiedDiagnostics(true);
+                            setTimeout(() => setCopiedDiagnostics(false), 2000);
+                          }}
+                          className="text-[11px] h-7 border-[#DCE7F0] text-[#172F4D] flex items-center gap-1"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          {copiedDiagnostics ? "Copied!" : "Copy JSON"}
+                        </Button>
+                      </div>
+                      <pre className="p-3 rounded-lg bg-[#0F172A] text-sky-300 font-mono text-[11px] max-h-48 overflow-y-auto leading-relaxed">
+                        {JSON.stringify(intakeResult, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 3: MANUAL AMOUNT DEFRAUDED (THE ONLY FRAUD-SPECIFIC NUMERIC FIELD) */}
+              <Card className="border-[#DCE7F0] shadow-sm bg-white overflow-hidden">
+                <CardHeader className="bg-[#E1F1FB]/60 border-b border-[#DCE7F0] pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-[#172F4D] text-white flex items-center justify-center font-bold text-sm">
+                        3
+                      </div>
+                      <div>
+                        <CardTitle className="text-base sm:text-lg font-bold text-[#172F4D]">
+                          Enter Amount Defrauded (INR)
+                        </CardTitle>
+                        <CardDescription className="text-xs text-[#71849A]">
+                          The single required numeric field. Enter or verify the exact amount lost.
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Badge className="bg-[#172F4D] text-white text-[11px] font-semibold">
+                      Manual Input
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#172F4D] uppercase tracking-wider mb-2">
+                      Amount Defrauded (INR) *
+                    </label>
+                    <div className="relative max-w-xs">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-base font-bold text-[#172F4D]">
+                        ₹
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        step="any"
+                        required
+                        value={amountDefrauded}
+                        onChange={(e) => setAmountDefrauded(e.target.value)}
+                        placeholder="e.g. 25000"
+                        className="w-full pl-8 pr-4 py-3 rounded-xl bg-[#F1F6FB] border border-[#DCE7F0] text-lg font-bold text-[#172F4D] placeholder-[#8CA0B3] focus:outline-none focus:border-[#172F4D] focus:bg-white transition-colors"
+                      />
+                    </div>
+                    {intakeResult.suggested_amount && (
+                      <p className="text-[11px] text-[#71849A] mt-1.5">
+                        Suggested from receipt OCR: <span className="font-semibold text-[#172F4D]">₹{intakeResult.suggested_amount}</span>
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* COMPLAINANT PROFILE VERIFICATION (AUTO-FILLED) */}
+              <Card className="border-[#DCE7F0] shadow-sm bg-white overflow-hidden">
+                <CardHeader className="bg-[#F1F6FB]/70 border-b border-[#DCE7F0] pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                      <CardTitle className="text-xs sm:text-sm font-bold text-[#172F4D]">
+                        Complainant Identity (Auto-filled from Profile)
+                      </CardTitle>
+                    </div>
+                    <span className="text-[11px] text-[#71849A]">No manual re-entry required</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-[#71849A] block">Full Name</span>
+                    <span className="font-semibold text-[#172F4D]">{user?.full_name || "Citizen Complainant"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#71849A] block">Registered Phone</span>
+                    <span className="font-semibold text-[#172F4D]">{user?.phone_number || "Not specified"}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#71849A] block">Email Address</span>
+                    <span className="font-semibold text-[#172F4D]">{user?.email || "Not specified"}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* STEP 4: CONFIRMATION & CASE CREATION BUTTON */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-[#71849A]">
+                  Clicking below locks evidence into the immutable case vault and activates the emergency response checklist.
                 </div>
-              </div>
-            )}
-
-            {/* Zero-Public Access & Security Notice */}
-            <div className="p-3.5 rounded-2xl bg-[#E1F1FB] border border-[#DCE7F0] text-xs text-[#172F4D] flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2 text-emerald-800 font-medium">
-                <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600" />
-                Private Evidence Vault: Stored in isolated tenant directory. No public web URLs are ever exposed.
-              </span>
-              <Badge variant="outline" className="text-[10px] shrink-0">15MB Max / File</Badge>
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-xs text-[#71849A]">
-              Confirm incident details and ensure no sensitive passwords are included.
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={isSubmitting}
-              className="w-full sm:w-auto font-bold gap-2 text-white bg-[#172F4D] hover:bg-[#1D3B60] shadow-sm"
-            >
-              <span>Submit Case & Seal Evidence Vault</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </CardFooter>
-        </Card>
-      </form>
-
-      {/* Case Summary Receipt (Rendered after successful creation) */}
-      {createdCase && (
-        <Card className="border-emerald-200 shadow-card animate-fadeIn">
-          <CardHeader className="bg-emerald-50/70 border-b border-emerald-100">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                <div>
-                  <CardTitle className="text-emerald-950">
-                    Evidence Collection Registered: {createdCase.case_number}
-                  </CardTitle>
-                  <CardDescription className="text-emerald-800">
-                    All digital evidence items have been associated with this incident record and stored in the private vault.
-                  </CardDescription>
-                </div>
-              </div>
-              <Badge variant="success">EVIDENCE SECURED</Badge>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4 pt-4 text-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-[#F1F6FB] border border-[#DCE7F0]">
-              <div>
-                <span className="text-[#71849A]">Defrauded Amount:</span>
-                <p className="font-mono font-bold text-red-600 text-base mt-0.5">
-                  {formatCurrency(createdCase.amount_lost)}
-                </p>
-              </div>
-              <div>
-                <span className="text-[#71849A]">12-Digit Bank UTR:</span>
-                <p className="font-mono font-bold text-[#172F4D] text-sm mt-0.5">
-                  {createdCase.transaction_id_utr || "Pending"}
-                </p>
-              </div>
-              <div>
-                <span className="text-[#71849A]">Evidence Files Stored:</span>
-                <p className="font-semibold text-[#172F4D] mt-0.5">
-                  {filesQueue.length} files attached
-                </p>
-              </div>
-              <div>
-                <span className="text-[#71849A]">Reporting Status:</span>
-                <p className="font-semibold text-[#172F4D] mt-0.5">
-                  {createdCase.status}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Link href="/dashboard/cases">
-                <Button variant="primary" size="sm" className="gap-1.5 text-white bg-[#172F4D] hover:bg-[#1D3B60]">
-                  <FolderLock className="w-4 h-4" />
-                  View in My Cases
+                <Button
+                  onClick={handleSubmitCase}
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto bg-[#172F4D] hover:bg-[#263F61] text-white font-bold px-8 py-3 rounded-xl flex items-center justify-center gap-2.5 shadow-sm transition-all"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Registering Case...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldAlert className="w-5 h-5 text-amber-300" />
+                      Create Fraud Case & Begin Emergency Defense
+                    </>
+                  )}
                 </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button variant="secondary" size="sm" className="bg-[#E1F1FB] text-[#172F4D] hover:bg-[#D4EBF9]">
-                  Return to Dashboard
-                </Button>
-              </Link>
-              <a href="tel:1930">
-                <Button variant="danger" size="sm" className="font-bold">
-                  Call 1930 with Ref {createdCase.case_number}
-                </Button>
-              </a>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </>
       )}
 
-      {/* Image Preview Modal */}
+      {/* Full-size Image Preview Modal */}
       {previewModalUrl && (
-        <div className="fixed inset-0 z-50 bg-[#172F4D]/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="relative max-w-3xl w-full bg-white border border-[#DCE7F0] rounded-2xl p-4 shadow-fintech space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[#DCE7F0]">
-              <span className="text-xs font-semibold text-[#172F4D] truncate">
-                Evidence Preview: {previewModalName}
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-[#DCE7F0]">
+            <div className="p-4 border-b border-[#DCE7F0] flex items-center justify-between bg-[#F1F6FB]">
+              <span className="text-xs sm:text-sm font-bold text-[#172F4D] truncate">
+                {previewModalName}
               </span>
               <button
-                type="button"
                 onClick={() => setPreviewModalUrl(null)}
-                className="p-1 rounded-lg hover:bg-[#F1F6FB] text-[#71849A] hover:text-[#172F4D]"
+                className="p-1 rounded-lg hover:bg-white text-[#71849A] hover:text-[#172F4D]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="max-h-[70vh] overflow-auto flex items-center justify-center bg-[#F1F6FB] rounded-xl p-2 border border-[#DCE7F0]">
+            <div className="p-4 overflow-auto flex-1 flex items-center justify-center bg-[#F1F6FB]/30">
               <img
                 src={previewModalUrl}
-                alt="Evidence Preview"
-                className="max-h-[65vh] object-contain rounded-lg"
+                alt={previewModalName}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg border border-[#DCE7F0]"
               />
             </div>
           </div>

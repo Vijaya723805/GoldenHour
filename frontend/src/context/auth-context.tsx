@@ -29,7 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
-  logout: async () => {},
+  logout: async () => { },
   updateProfile: async () => ({ success: false }),
 });
 
@@ -80,10 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+
       // 1. Supabase Auth if configured
       if (isSupabaseConfigured && supabase) {
         const { data: supaData, error: supaErr } = await supabase.auth.signInWithPassword({
-          email,
+          email: normalizedEmail,
           password,
         });
         if (supaErr) throw new Error(supaErr.message);
@@ -97,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
 
       const resData = await res.json();

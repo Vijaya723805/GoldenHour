@@ -14,6 +14,13 @@ class StorageService:
     def __init__(self):
         self.upload_dir = Path(settings.UPLOAD_DIR)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
+        self.registry: Dict[str, Dict[str, Any]] = {}
+
+    def get_evidence_meta(self, evidence_id: str) -> Optional[Dict[str, Any]]:
+        return self.registry.get(evidence_id)
+
+    def register_evidence(self, evidence_id: str, meta: Dict[str, Any]):
+        self.registry[evidence_id] = meta
 
     async def save_case_evidence(
         self, file: UploadFile, case_id: str, category: str = "OTHER"
@@ -99,6 +106,7 @@ class StorageService:
         res = await self.save_case_evidence(file, case_id="intake", category="UPI_RECEIPT")
         res["cloud_status"] = res["storage_location"]
         res["timestamp"] = datetime.now().isoformat()
+        self.registry[res["evidence_id"]] = res
         return res
 
     def delete_evidence_file(self, local_path: str, storage_path: Optional[str] = None) -> bool:
