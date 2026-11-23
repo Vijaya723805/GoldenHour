@@ -9,3 +9,4 @@ pillow>=10.2.0
 anthropic>=0.20.0
 supabase>=2.3.0
 reportlab>=5.0.0
+rapidocr-onnxruntime>=1.2.0

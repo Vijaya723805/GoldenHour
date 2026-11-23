@@ -48,7 +48,8 @@ def generate_case_complaints(
     bundle = complaint_service.get_or_generate_bundle(
         case_id=case_id,
         language=req.language,
-        force_regenerate=req.regenerate
+        force_regenerate=req.regenerate,
+        user=user
     )
 
     # Automatically update case tracking document preparation tasks
@@ -71,7 +72,7 @@ def get_case_complaints(
     token = extract_token(authorization)
     user = auth_service.get_current_user(token)
 
-    bundle = complaint_service.get_or_generate_bundle(case_id=case_id, language=language)
+    bundle = complaint_service.get_or_generate_bundle(case_id=case_id, language=language, user=user)
     return ApiResponse(
         success=True,
         message="Complaint documents bundle retrieved.",
@@ -99,7 +100,8 @@ def update_complaint_document(
             case_id=case_id,
             doc_type=doc_type,
             payload=payload,
-            language=language
+            language=language,
+            user=user
         )
         return ApiResponse(
             success=True,
@@ -114,7 +116,8 @@ def update_complaint_document(
 def download_complaint_pdf(
     case_id: str,
     doc_type: ComplaintDocType,
-    language: DocumentLanguage = Query(DocumentLanguage.EN),
+    language: Optional[str] = Query("en"),
+    token: Optional[str] = Query(None),
     authorization: Optional[str] = Header(None)
 ):
     """
@@ -122,7 +125,17 @@ def download_complaint_pdf(
     Includes case metadata table, missing information callout, document timestamp,
     and mandatory legal notice.
     """
-    bundle = complaint_service.get_or_generate_bundle(case_id=case_id, language=language)
+    # Safely normalize language input
+    lang_enum = DocumentLanguage.EN
+    if language:
+        try:
+            lang_enum = DocumentLanguage(language.lower())
+        except ValueError:
+            lang_enum = DocumentLanguage.EN
+
+    auth_token = token or extract_token(authorization)
+    user = auth_service.get_current_user(auth_token)
+    bundle = complaint_service.get_or_generate_bundle(case_id=case_id, language=lang_enum, user=user)
     
     doc_key = doc_type.value
     if doc_key not in bundle.documents:
@@ -141,10 +154,10 @@ def download_complaint_pdf(
         structured_fields=doc.structured_fields,
         missing_fields=doc.missing_fields,
         action_items=doc.action_items,
-        language=language
+        language=lang_enum
     )
 
-    filename = f"{bundle.case_number}_{doc_type.value.lower()}_{language.value}.pdf"
+    filename = f"{bundle.case_number}_{doc_type.value.lower()}_{lang_enum.value}.pdf"
 
     return StreamingResponse(
         io.BytesIO(pdf_bytes),

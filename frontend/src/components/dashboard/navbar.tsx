@@ -2,9 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
-import { Menu, Globe, PhoneCall } from "lucide-react";
+import { Menu, Globe, PhoneCall, Glasses } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useLanguage } from "@/context/language-context";
+import { useSeniorMode } from "@/context/senior-mode-context";
 import { Language } from "@/types";
 
 interface DashboardNavbarProps {
@@ -14,6 +15,7 @@ interface DashboardNavbarProps {
 export function DashboardNavbar({ onMenuToggle }: DashboardNavbarProps) {
   const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { seniorMode, toggleSeniorMode } = useSeniorMode();
 
   return (
     <header className="sticky top-0 z-30 h-16 w-full bg-white border-b border-[#DCE7F0] flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-sm">
@@ -37,8 +39,28 @@ export function DashboardNavbar({ onMenuToggle }: DashboardNavbarProps) {
         </div>
       </div>
 
-      {/* Right: Language Switcher, 1930 hotlink & User avatar */}
-      <div className="flex items-center gap-3">
+      {/* Right: Language Switcher, Senior Mode, 1930 hotlink & User avatar */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Senior Citizen Accessibility Toggle */}
+        <button
+          onClick={toggleSeniorMode}
+          type="button"
+          title={seniorMode ? "Disable Senior Citizen Mode" : "Enable Senior Citizen Mode (Larger text, clearer display)"}
+          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all min-h-[38px] ${
+            seniorMode
+              ? "bg-amber-100 border-amber-300 text-amber-900 shadow-sm ring-1 ring-amber-300"
+              : "bg-[#F1F6FB] border-[#DCE7F0] text-[#172F4D] hover:bg-[#E1F1FB]"
+          }`}
+        >
+          <Glasses className={`w-4 h-4 ${seniorMode ? "text-amber-800" : "text-[#477DA8]"}`} />
+          <span className="hidden sm:inline">
+            {seniorMode ? "Senior Mode: ON" : "Senior Mode"}
+          </span>
+          {seniorMode && (
+            <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse hidden sm:inline-block" />
+          )}
+        </button>
+
         {/* Language Selector */}
         <div className="flex items-center gap-1.5 bg-[#F1F6FB] border border-[#DCE7F0] rounded-xl px-2.5 py-1.5 text-xs text-[#172F4D]">
           <Globe className="w-4 h-4 text-[#172F4D]" />
@@ -60,7 +82,8 @@ export function DashboardNavbar({ onMenuToggle }: DashboardNavbarProps) {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold hover:bg-red-100 transition-all min-h-[38px] shadow-sm"
         >
           <PhoneCall className="w-3.5 h-3.5 text-red-600 animate-pulse" />
-          <span>1930 Helpline</span>
+          <span className="hidden md:inline">1930 Helpline</span>
+          <span className="md:hidden">1930</span>
         </a>
 
         {/* User Profile Link */}

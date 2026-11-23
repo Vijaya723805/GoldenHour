@@ -13,27 +13,31 @@ from app.schemas.complaint import (
 )
 from app.services.verification_service import verification_service
 from app.services.dashboard_service import dashboard_service
+from app.services.auth_service import auth_service
+from app.schemas.auth import UserProfile
 
 
 class ComplaintService:
     def __init__(self):
-        # In-memory store for generated bundles: keyed by f"{case_id}_{language}"
+        # In-memory store for generated bundles: keyed by f"{case_id}_{language}_{user_id}"
         self._bundles: Dict[str, CaseComplaintBundle] = {}
 
     def get_or_generate_bundle(
         self,
         case_id: str,
         language: DocumentLanguage = DocumentLanguage.EN,
-        force_regenerate: bool = False
+        force_regenerate: bool = False,
+        user: Optional[UserProfile] = None
     ) -> CaseComplaintBundle:
         """Retrieves or generates all 4 complaint documents from verified case data."""
-        bundle_key = f"{case_id}_{language.value}"
+        user_key = user.id if user else "default"
+        bundle_key = f"{case_id}_{language.value}_{user_key}"
 
         if not force_regenerate and bundle_key in self._bundles:
             return self._bundles[bundle_key]
 
-        # Fetch verified case parameters
-        case_data, verified_fields, missing_fields, overall_score = self._extract_case_parameters(case_id)
+        # Fetch verified case parameters with dynamic user identity resolution
+        case_data, verified_fields, missing_fields, overall_score = self._extract_case_parameters(case_id, user)
 
         # Generate each of the 4 documents in the requested language
         docs: Dict[str, GeneratedDocument] = {}
@@ -80,10 +84,11 @@ class ComplaintService:
         case_id: str,
         doc_type: ComplaintDocType,
         payload: UpdateComplaintDraftPayload,
-        language: DocumentLanguage = DocumentLanguage.EN
+        language: DocumentLanguage = DocumentLanguage.EN,
+        user: Optional[UserProfile] = None
     ) -> GeneratedDocument:
         """Allows citizen to edit document text and persist revisions."""
-        bundle = self.get_or_generate_bundle(case_id, language)
+        bundle = self.get_or_generate_bundle(case_id, language, user=user)
         
         doc_key = doc_type.value
         if doc_key not in bundle.documents:
@@ -97,7 +102,7 @@ class ComplaintService:
 
         return doc
 
-    def _extract_case_parameters(self, case_id: str):
+    def _extract_case_parameters(self, case_id: str, current_user: Optional[UserProfile] = None):
         """Pulls verified fields from verification report and dashboard case detail."""
         rep = verification_service.get_or_create_report(case_id)
         case = dashboard_service._cases.get(case_id)
@@ -120,6 +125,20 @@ class ComplaintService:
             verified["beneficiary_upi_id"] = case.beneficiary_upi_id
         if "beneficiary_bank" not in verified and case and case.beneficiary_bank:
             verified["beneficiary_bank"] = case.beneficiary_bank
+
+        # Resolve victim profile dynamically:
+        victim_profile = current_user
+        if not victim_profile and case and case.contact_email:
+            victim_profile = auth_service.get_user_by_email(case.contact_email)
+        if not victim_profile and case and case.victim_id:
+            victim_profile = auth_service.get_user_by_id(case.victim_id)
+        if not victim_profile:
+            victim_profile = auth_service.get_primary_user()
+
+        victim_name = victim_profile.full_name if victim_profile and victim_profile.full_name else "Citizen Complainant"
+        victim_phone = (case.contact_phone if case and case.contact_phone else None) or (victim_profile.phone_number if victim_profile else None) or "+91 98765 43210"
+        victim_email = (case.contact_email if case and case.contact_email else None) or (victim_profile.email if victim_profile else None) or "victim.demo@goldenhour.in"
+        victim_bank = (victim_profile.bank_name if victim_profile and victim_profile.bank_name else None) or verified.get("sender_bank") or "State Bank of India (SBI)"
 
         # Missing fields detection
         missing: List[str] = []
@@ -146,11 +165,11 @@ class ComplaintService:
         case_data = {
             "case_id": case_id,
             "case_number": case_number,
-            "victim_name": "Vikramaditya Sharma",  # Demo victim identity
-            "victim_phone": case.contact_phone if case and case.contact_phone else "+91 98765 43210",
-            "victim_email": case.contact_email if case and case.contact_email else "victim.demo@goldenhour.in",
-            "victim_bank": verified.get("sender_bank") or "Axis Bank",
-            "incident_date": verified.get("transaction_date") or datetime.now().strftime("%Y-%m-%d"),
+            "victim_name": victim_name,
+            "victim_phone": victim_phone,
+            "victim_email": victim_email,
+            "victim_bank": victim_bank,
+            "incident_date": verified.get("transaction_date") or (case.incident_date if case and case.incident_date else None) or datetime.now().strftime("%Y-%m-%d"),
             "incident_description": case.fraud_description if case else (
                 "Received an urgent SMS claiming immediate power disconnection. "
                 "Clicked malicious APK payment gateway link which debited unauthorized funds via UPI."

@@ -225,7 +225,7 @@ class AssistantService:
             reply=reply,
             language=req.language,
             detected_topic=topic,
-            suggested_quick_actions=self._get_quick_actions(topic, req.language),
+            suggested_quick_actions=self._get_quick_actions(topic, req.language, req.case_id),
             follow_up_questions=self._get_follow_ups(topic, req.language),
             senior_citizen_mode=req.senior_citizen_mode,
             zero_credential_sanitized=True,
@@ -583,48 +583,223 @@ class AssistantService:
                 "How can I assist you with your specific incident or case right now?"
             )
 
-    def _get_quick_actions(self, topic: AssistantTopic, lang: AssistantLanguage) -> List[QuickAction]:
+    def _get_quick_actions(self, topic: AssistantTopic, lang: AssistantLanguage, case_id: Optional[str] = None) -> List[QuickAction]:
+        complaint_url = f"/dashboard/cases/{case_id}/complaints" if case_id else "/dashboard/cases"
+        case_url = f"/dashboard/cases/{case_id}" if case_id else "/dashboard/cases"
+
         if lang == AssistantLanguage.TE:
-            return [
-                QuickAction(label="1930 కి కాల్ చేయండి", action_type="CALL", action_target="tel:1930", description="ఉచిత సైబర్ హెల్ప్‌లైన్"),
-                QuickAction(label="cybercrime.gov.in", action_type="NAVIGATE", action_target="https://cybercrime.gov.in", description="అధికారిక సైబర్ పోర్టల్"),
-                QuickAction(label="కేసు రసీదులు చూడండి", action_type="NAVIGATE", action_target="/dashboard/cases", description="ఎవిడెన్స్ వాల్ట్")
-            ]
+            if topic in [AssistantTopic.HELPLINE_1930, AssistantTopic.GREETING]:
+                return [
+                    QuickAction(label="1930 కి కాల్ చేయండి", action_type="CALL", action_target="tel:1930", description="ఉచిత సైబర్ హెల్ప్‌లైన్"),
+                    QuickAction(label="1930 మాట్లాడే స్క్రిప్ట్", action_type="PROMPT", action_target="1930 ఆపరేటర్‌తో మాట్లాడటానికి స్క్రిప్ట్ ఇవ్వండి", description="ఖచ్చితమైన పదాలు"),
+                    QuickAction(label="cybercrime.gov.in", action_type="NAVIGATE", action_target="https://cybercrime.gov.in", description="అధికారిక సైబర్ పోర్టల్")
+                ]
+            elif topic in [AssistantTopic.BANK_DISPUTE_VS_FREEZE, AssistantTopic.RBI_ZERO_LIABILITY]:
+                return [
+                    QuickAction(label="ఫిర్యాదుల స్టూడియో (లేఖలు)", action_type="NAVIGATE", action_target=complaint_url, description="బ్యాంక్ లేఖ పిడిఎఫ్"),
+                    QuickAction(label="1930 కి కాల్ చేయండి", action_type="CALL", action_target="tel:1930", description="హెల్ప్‌లైన్"),
+                    QuickAction(label="బ్యాంక్ మేనేజర్ స్క్రిప్ట్", action_type="PROMPT", action_target="బ్యాంక్ మేనేజర్‌కు చెప్పవలసిన స్క్రిప్ట్ ఏమిటి?", description="వివాద ప్రకటన")
+                ]
+            elif topic == AssistantTopic.EVIDENCE_PRESERVATION:
+                return [
+                    QuickAction(label="ఆధారాలు అప్‌లోడ్ చేయండి", action_type="NAVIGATE", action_target="/dashboard/report", description="కొత్త రసీదులు"),
+                    QuickAction(label="ఎవిడెన్స్ వాల్ట్ చూడండి", action_type="NAVIGATE", action_target=case_url, description="ధృవీకరించబడిన వివరాలు"),
+                    QuickAction(label="1930 కి కాల్ చేయండి", action_type="CALL", action_target="tel:1930", description="హెల్ప్‌లైన్")
+                ]
+            elif topic == AssistantTopic.CASE_SPECIFIC_INQUIRY:
+                return [
+                    QuickAction(label="కేసు ఫిర్యాదుల స్టూడియో", action_type="NAVIGATE", action_target=complaint_url, description="రాతపూర్వక పత్రాలు"),
+                    QuickAction(label="కేసు పూర్తి వివరాలు", action_type="NAVIGATE", action_target=case_url, description="సారాంశం"),
+                    QuickAction(label="1930 కి కాల్ చేయండి", action_type="CALL", action_target="tel:1930", description="కేసు రిఫరెన్స్ తో")
+                ]
+            else:
+                return [
+                    QuickAction(label="1930 కి తక్షణమే కాల్ చేయండి", action_type="CALL", action_target="tel:1930", description="గోల్డెన్ అవర్ హెల్ప్‌లైన్"),
+                    QuickAction(label="మోసాన్ని నివేదించండి", action_type="NAVIGATE", action_target="/dashboard/report", description="కొత్త కేసు నమోదు"),
+                    QuickAction(label="ఫిర్యాదు పత్రాలు రూపొందించండి", action_type="NAVIGATE", action_target=complaint_url, description="బ్యాంక్ వివాద లేఖ")
+                ]
+
         elif lang == AssistantLanguage.HI:
-            return [
-                QuickAction(label="1930 पर कॉल करें", action_type="CALL", action_target="tel:1930", description="निशुल्क राष्ट्रीय हेल्पलाइन"),
-                QuickAction(label="cybercrime.gov.in", action_type="NAVIGATE", action_target="https://cybercrime.gov.in", description="आधिकारिक पोर्टल"),
-                QuickAction(label="केस विवरण देखें", action_type="NAVIGATE", action_target="/dashboard/cases", description="सबूत वॉल्ट")
-            ]
+            if topic in [AssistantTopic.HELPLINE_1930, AssistantTopic.GREETING]:
+                return [
+                    QuickAction(label="1930 पर कॉल करें", action_type="CALL", action_target="tel:1930", description="निशुल्क राष्ट्रीय हेल्पलाइन"),
+                    QuickAction(label="1930 कॉलिंग स्क्रिप्ट", action_type="PROMPT", action_target="1930 ऑपरेटर से बात करने के लिए स्क्रिप्ट दें", description="सही शब्द"),
+                    QuickAction(label="cybercrime.gov.in", action_type="NAVIGATE", action_target="https://cybercrime.gov.in", description="आधिकारिक पोर्टल")
+                ]
+            elif topic in [AssistantTopic.BANK_DISPUTE_VS_FREEZE, AssistantTopic.RBI_ZERO_LIABILITY]:
+                return [
+                    QuickAction(label="शिकायत स्टूडियो (पत्र तैयार करें)", action_type="NAVIGATE", action_target=complaint_url, description="बैंक विवाद पत्र"),
+                    QuickAction(label="1930 पर कॉल करें", action_type="CALL", action_target="tel:1930", description="हेल्पलाइन"),
+                    QuickAction(label="बैंक प्रबंधक स्क्रिप्ट", action_type="PROMPT", action_target="बैंक प्रबंधक को क्या बोलना चाहिए?", description="विवाद विवरण")
+                ]
+            elif topic == AssistantTopic.EVIDENCE_PRESERVATION:
+                return [
+                    QuickAction(label="सबूत अपलोड करें", action_type="NAVIGATE", action_target="/dashboard/report", description="रसीद और स्क्रीनशॉट"),
+                    QuickAction(label="सबूत वॉल्ट देखें", action_type="NAVIGATE", action_target=case_url, description="सत्यापित विवरण"),
+                    QuickAction(label="1930 पर कॉल करें", action_type="CALL", action_target="tel:1930", description="हेल्पलाइन")
+                ]
+            elif topic == AssistantTopic.CASE_SPECIFIC_INQUIRY:
+                return [
+                    QuickAction(label="शिकायत स्टूडियो खोलें", action_type="NAVIGATE", action_target=complaint_url, description="दस्तावेज़ डाउनलोड"),
+                    QuickAction(label="केस विवरण देखें", action_type="NAVIGATE", action_target=case_url, description="केस सारांश"),
+                    QuickAction(label="1930 पर कॉल करें", action_type="CALL", action_target="tel:1930", description="हेल्पलाइन")
+                ]
+            else:
+                return [
+                    QuickAction(label="तुरंत 1930 पर कॉल करें", action_type="CALL", action_target="tel:1930", description="गोल्डन ऑवर हेल्पलाइन"),
+                    QuickAction(label="नया केस दर्ज करें", action_type="NAVIGATE", action_target="/dashboard/report", description="ऑनलाइन रिपोर्ट"),
+                    QuickAction(label="शिकायत पत्र तैयार करें", action_type="NAVIGATE", action_target=complaint_url, description="बैंक लीन आवेदन")
+                ]
+
         else:
-            return [
-                QuickAction(label="Call 1930 Helpline", action_type="CALL", action_target="tel:1930", description="Toll-Free National Helpline"),
-                QuickAction(label="cybercrime.gov.in", action_type="NAVIGATE", action_target="https://cybercrime.gov.in", description="Official Police Portal"),
-                QuickAction(label="View Case Vault", action_type="NAVIGATE", action_target="/dashboard/cases", description="Evidence Details")
-            ]
+            if topic in [AssistantTopic.HELPLINE_1930, AssistantTopic.GREETING]:
+                return [
+                    QuickAction(label="Call 1930 Helpline", action_type="CALL", action_target="tel:1930", description="Toll-Free National Helpline"),
+                    QuickAction(label="1930 Speaking Script", action_type="PROMPT", action_target="What exact words should I speak to the 1930 operator?", description="Exact dialogue"),
+                    QuickAction(label="cybercrime.gov.in", action_type="NAVIGATE", action_target="https://cybercrime.gov.in", description="Official Police Portal")
+                ]
+            elif topic in [AssistantTopic.BANK_DISPUTE_VS_FREEZE, AssistantTopic.RBI_ZERO_LIABILITY]:
+                return [
+                    QuickAction(label="Complaint Studio (Draft Letters)", action_type="NAVIGATE", action_target=complaint_url, description="Generate Bank Letters"),
+                    QuickAction(label="Call 1930 Helpline", action_type="CALL", action_target="tel:1930", description="Toll-Free Helpline"),
+                    QuickAction(label="Bank Manager Script", action_type="PROMPT", action_target="Give me the exact script to tell my bank manager", description="Speaking script")
+                ]
+            elif topic == AssistantTopic.EVIDENCE_PRESERVATION:
+                return [
+                    QuickAction(label="Upload Receipts & SMS", action_type="NAVIGATE", action_target="/dashboard/report", description="Add Evidence"),
+                    QuickAction(label="View Evidence Vault", action_type="NAVIGATE", action_target=case_url, description="Verified Parameters"),
+                    QuickAction(label="Call 1930 Helpline", action_type="CALL", action_target="tel:1930", description="Emergency Help")
+                ]
+            elif topic == AssistantTopic.CASE_SPECIFIC_INQUIRY:
+                return [
+                    QuickAction(label="Open Complaint Studio", action_type="NAVIGATE", action_target=complaint_url, description="Download Dossier PDF"),
+                    QuickAction(label="View Full Case Details", action_type="NAVIGATE", action_target=case_url, description="Case Overview"),
+                    QuickAction(label="Call 1930 with UTR", action_type="CALL", action_target="tel:1930", description="Quote Parameters")
+                ]
+            else:
+                return [
+                    QuickAction(label="Call 1930 Immediately", action_type="CALL", action_target="tel:1930", description="Golden Hour Toll-Free"),
+                    QuickAction(label="Report Fraud Incident", action_type="NAVIGATE", action_target="/dashboard/report", description="Upload Evidence"),
+                    QuickAction(label="Draft Bank Dispute Letter", action_type="NAVIGATE", action_target=complaint_url, description="Complaint Studio")
+                ]
 
     def _get_follow_ups(self, topic: AssistantTopic, lang: AssistantLanguage) -> List[str]:
         if lang == AssistantLanguage.TE:
-            return [
-                "1930 నంబర్కు ఎలా కాల్ చేయాలి?",
-                "UPI మోసాన్ని ఎలా ఫిర్యాదు చేయాలి?",
-                "నేను ఏ ఆధారాలను భద్రపరచాలి?",
-                "నా బ్యాంకును ఎలా సంప్రదించాలి?"
-            ]
+            if topic == AssistantTopic.HELPLINE_1930:
+                return [
+                    "1930 ఆపరేటర్ ఏ ఖచ్చితమైన వివరాలను అడుగుతారు?",
+                    "1930 కి కాల్ చేసిన తర్వాత నా బ్యాంకుకు ఏమి చెప్పాలి?",
+                    "NCRP పోర్టల్‌లో ఫిర్యాదును ఎలా ట్రాక్ చేయాలి?"
+                ]
+            elif topic in [AssistantTopic.BANK_DISPUTE_VS_FREEZE, AssistantTopic.RBI_ZERO_LIABILITY]:
+                return [
+                    "RBI జీరో లయబిలిటీ కింద నాకు పూర్తి రిఫండ్ వస్తుందా?",
+                    "బ్యాంకు వివాదాన్ని నమోదు చేయడానికి నిరాకరిస్తే ఏమి చేయాలి?",
+                    "లబ్ధిదారుడి ఖాతాపై లీన్ హోల్డ్ పెట్టడానికి ఎంత సమయం పడుతుంది?"
+                ]
+            elif topic == AssistantTopic.EVIDENCE_PRESERVATION:
+                return [
+                    "నా వద్ద కేవలం బ్యాంక్ SMS మాత్రమే ఉంటే ఎలా?",
+                    "PhonePe లో 12 అంకెల UTR నంబర్‌ను ఎక్కడ కనుగొనాలి?",
+                    "WhatsApp చాట్ స్క్రీన్‌షాట్‌లు చట్టబద్ధంగా చెల్లుతాయా?"
+                ]
+            elif topic in [AssistantTopic.FAKE_QR_SCAM, AssistantTopic.UNAUTHORIZED_DEBIT, AssistantTopic.PHISHING_LINK]:
+                return [
+                    "1930 మాట్లాడే స్క్రిప్ట్ చూపించండి",
+                    "నా బ్యాంక్ మేనేజర్‌కు చెప్పవలసిన స్క్రిప్ట్ ఏమిటి?",
+                    "నా డబ్బు రికవరీ అయ్యే అవకాశాలు ఎంతవరకు ఉన్నాయి?"
+                ]
+            elif topic == AssistantTopic.CASE_SPECIFIC_INQUIRY:
+                return [
+                    "ఈ కేసుకు బ్యాంక్ ఫిర్యాదు లేఖను తయారు చేయండి",
+                    "1930 ఆపరేటర్‌కు ఈ కేసు నుండి ఏ వివరాలు చదవాలి?",
+                    "నా 12 అంకెల UTR నంబర్ ధృవీకరించబడిందా?"
+                ]
+            else:
+                return [
+                    "1930 నంబర్కు ఎలా కాల్ చేయాలి?",
+                    "UPI మోసాన్ని ఎలా ఫిర్యాదు చేయాలి?",
+                    "నేను ఏ ఆధారాలను భద్రపరచాలి?",
+                    "నా డబ్బు తిరిగి వస్తుందా?"
+                ]
+
         elif lang == AssistantLanguage.HI:
-            return [
-                "1930 पर कैसे कॉल करें?",
-                "UPI धोखाधड़ी की शिकायत कैसे करें?",
-                "कौन से सबूत सुरक्षित रखने चाहिए?",
-                "बैंक से कैसे संपर्क करें?"
-            ]
+            if topic == AssistantTopic.HELPLINE_1930:
+                return [
+                    "1930 ऑपरेटर मुझसे कौन से सटीक विवरण पूछेगा?",
+                    "1930 पर कॉल करने के बाद बैंक को क्या बताना चाहिए?",
+                    "NCRP पोर्टल पर अपनी शिकायत को कैसे ट्रैक करें?"
+                ]
+            elif topic in [AssistantTopic.BANK_DISPUTE_VS_FREEZE, AssistantTopic.RBI_ZERO_LIABILITY]:
+                return [
+                    "क्या RBI जीरो लायबिलिटी के तहत मुझे पूरा रिफंड मिलेगा?",
+                    "अगर बैंक शिकायत दर्ज करने से मना करे तो क्या करें?",
+                    "प्राप्तकर्ता बैंक को खाता लीन करने में कितना समय लगता है?"
+                ]
+            elif topic == AssistantTopic.EVIDENCE_PRESERVATION:
+                return [
+                    "अगर मेरे पास केवल बैंक का SMS हो और रसीद न हो तो क्या करें?",
+                    "PhonePe/GPay पर 12 अंकों का UTR नंबर कहाँ मिलता है?",
+                    "क्या व्हाट्सएप चैट के स्क्रीनशॉट कानूनी सबूत माने जाते हैं?"
+                ]
+            elif topic in [AssistantTopic.FAKE_QR_SCAM, AssistantTopic.UNAUTHORIZED_DEBIT, AssistantTopic.PHISHING_LINK]:
+                return [
+                    "1930 पर बोलने के लिए मुझे स्क्रिप्ट दें",
+                    "बैंक प्रबंधक को क्या बोलना चाहिए?",
+                    "पैसे वापस मिलने की कितनी संभावना है?"
+                ]
+            elif topic == AssistantTopic.CASE_SPECIFIC_INQUIRY:
+                return [
+                    "इस केस के लिए बैंक शिकायत पत्र का प्रारूप बनाएं",
+                    "1930 ऑपरेटर को इस केस से कौन से विवरण देने हैं?",
+                    "क्या मेरा 12 अंकों का UTR नंबर सत्यापित हो गया है?"
+                ]
+            else:
+                return [
+                    "1930 पर कैसे कॉल करें?",
+                    "UPI धोखाधड़ी की शिकायत कैसे करें?",
+                    "कौन से सबूत सुरक्षित रखने चाहिए?",
+                    "क्या मेरा पैसा वापस मिल सकता है?"
+                ]
+
         else:
-            return [
-                "How do I call 1930?",
-                "How do I report UPI fraud?",
-                "What evidence should I save?",
-                "How do I contact my bank?"
-            ]
+            if topic == AssistantTopic.HELPLINE_1930:
+                return [
+                    "What exact questions does the 1930 operator ask?",
+                    "What should I tell my bank after calling 1930?",
+                    "How do I track my 1930 NCRP complaint status?"
+                ]
+            elif topic in [AssistantTopic.BANK_DISPUTE_VS_FREEZE, AssistantTopic.RBI_ZERO_LIABILITY]:
+                return [
+                    "Am I entitled to 100% refund under RBI Zero Liability?",
+                    "What should I do if my bank branch refuses to register the dispute?",
+                    "How long does a bank take to place an administrative lien hold?"
+                ]
+            elif topic == AssistantTopic.EVIDENCE_PRESERVATION:
+                return [
+                    "What if I only have a debit SMS and no digital receipt?",
+                    "How do I locate the 12-digit UTR on PhonePe or Google Pay?",
+                    "Are WhatsApp scam chat transcripts legally valid evidence?"
+                ]
+            elif topic in [AssistantTopic.FAKE_QR_SCAM, AssistantTopic.UNAUTHORIZED_DEBIT, AssistantTopic.PHISHING_LINK]:
+                return [
+                    "What exact words should I speak to the 1930 operator?",
+                    "Give me the exact script to tell my bank manager",
+                    "What are the realistic chances of recovering my funds?"
+                ]
+            elif topic == AssistantTopic.CASE_SPECIFIC_INQUIRY:
+                return [
+                    "Generate a formal bank complaint letter for this case",
+                    "What exact parameters from this case should I read to 1930?",
+                    "Is my 12-digit UTR number fully verified?"
+                ]
+            else:
+                return [
+                    "How do I call 1930?",
+                    "How do I report UPI fraud?",
+                    "What evidence should I save?",
+                    "Can my money be recovered?"
+                ]
 
     def _call_claude(
         self,

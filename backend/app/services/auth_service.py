@@ -151,6 +151,29 @@ class AuthService:
             return None
         return self._mock_users.get(email, {}).get("profile")
 
+    def get_user_by_id(self, user_id: str) -> Optional[UserProfile]:
+        if not user_id:
+            return None
+        for email, rec in self._mock_users.items():
+            prof = rec.get("profile")
+            if prof and prof.id == user_id:
+                return prof
+        return None
+
+    def get_user_by_email(self, email: str) -> Optional[UserProfile]:
+        if not email:
+            return None
+        rec = self._mock_users.get(email.strip().lower())
+        return rec.get("profile") if rec else None
+
+    def get_primary_user(self) -> Optional[UserProfile]:
+        """Returns the active non-demo citizen profile if registered, or the demo profile."""
+        for email, rec in self._mock_users.items():
+            if email != "victim.demo@goldenhour.in" and rec.get("profile"):
+                return rec["profile"]
+        demo_rec = self._mock_users.get("victim.demo@goldenhour.in")
+        return demo_rec.get("profile") if demo_rec else None
+
     def update_profile(self, user_id: str, updates: ProfileUpdateRequest) -> UserProfile:
         for email, rec in self._mock_users.items():
             if rec["profile"].id == user_id:

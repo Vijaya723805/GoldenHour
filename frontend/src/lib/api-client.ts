@@ -31,7 +31,15 @@ import {
   UpdateTrackingStatusPayload
 } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001/api/v1";
+const getApiBaseUrl = (): string => {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname || "127.0.0.1";
+    return `http://${host}:8001/api/v1`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api/v1";
+};
+
+export const API_BASE_URL = typeof window !== "undefined" ? getApiBaseUrl() : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001/api/v1");
 
 export function getAuthHeaders(token?: string | null): Record<string, string> {
   const t = token || (typeof window !== "undefined" ? localStorage.getItem("goldenhour_token") : null);
@@ -625,9 +633,31 @@ export async function updateComplaintDocument(
 export function getComplaintPdfDownloadUrl(
   caseId: string,
   docType: string,
-  language: string = "en"
+  language: string = "en",
+  token?: string | null
 ): string {
-  return `${API_BASE_URL}/complaints/cases/${caseId}/${docType}/pdf?language=${language}`;
+  const safeLang = (language === "te" || language === "hi") ? language : "en";
+  const baseUrl = typeof window !== "undefined" ? getApiBaseUrl() : API_BASE_URL;
+  const tokenParam = token ? `&token=${encodeURIComponent(token)}` : "";
+  return `${baseUrl}/complaints/cases/${caseId}/${docType}/pdf?language=${safeLang}${tokenParam}`;
+}
+
+export async function downloadComplaintPdfBlob(
+  caseId: string,
+  docType: string,
+  language: string = "en",
+  token?: string | null
+): Promise<Blob> {
+  const url = getComplaintPdfDownloadUrl(caseId, docType, language, token);
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`Failed to download PDF: HTTP ${res.status}`);
+  }
+  return await res.blob();
 }
 
 // ==========================================
