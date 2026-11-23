@@ -71,3 +71,85 @@ body {
 button, a, input, select, textarea {
   touch-action: manipulation;
 }
+
+/* ========================================================
+   SENIOR CITIZEN ACCESSIBILITY MODE (DASHBOARD-WIDE)
+   High contrast, larger type scale, clearer borders & targets
+   ======================================================== */
+.senior-mode {
+  font-size: 112%;
+}
+
+.senior-mode body {
+  font-size: 1.05rem;
+}
+
+.senior-mode p,
+.senior-mode span,
+.senior-mode label {
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.senior-mode h1 {
+  font-size: 2.1rem !important;
+  font-weight: 900 !important;
+}
+
+.senior-mode h2 {
+  font-size: 1.55rem !important;
+  font-weight: 800 !important;
+}
+
+.senior-mode h3 {
+  font-size: 1.3rem !important;
+  font-weight: 800 !important;
+}
+
+.senior-mode button,
+.senior-mode a {
+  min-height: 42px;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+.senior-mode input,
+.senior-mode select,
+.senior-mode textarea {
+  font-size: 1rem !important;
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+  border-width: 1.5px !important;
+  border-color: #9cb5cb !important;
+}
+
+.senior-mode .text-xs {
+  font-size: 0.88rem !important;
+  line-height: 1.45 !important;
+}
+
+.senior-mode .text-\[10px\],
+.senior-mode .text-\[11px\] {
+  font-size: 0.82rem !important;
+}
+
+.senior-mode .text-sm {
+  font-size: 1rem !important;
+}
+
+.senior-mode .border-\[\#DCE7F0\] {
+  border-color: #a8bed4 !important;
+}
+
+.senior-mode .text-\[\#71849A\] {
+  color: #3b526d !important;
+}
+
+.senior-mode .bg-\[\#F1F6FB\] {
+  background-color: #edf4fa !important;
+}
+
+.senior-mode .shadow-card,
+.senior-mode .shadow-sm {
+  box-shadow: 0 2px 8px rgba(23, 47, 77, 0.12) !important;
+}

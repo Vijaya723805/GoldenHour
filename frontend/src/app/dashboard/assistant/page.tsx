@@ -30,6 +30,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth-context";
+import { useSeniorMode } from "@/context/senior-mode-context";
 import { 
   AssistantLanguage, 
   AssistantChatRequest, 
@@ -85,9 +86,8 @@ const STATIC_SUGGESTED_QUESTIONS: Record<AssistantLanguage, string[]> = {
 export default function AssistantPage() {
   const { user, token } = useAuth();
   
-  // Settings & Toggles with LocalStorage persistence
+  const { seniorMode, toggleSeniorMode, setSeniorMode } = useSeniorMode();
   const [language, setLanguage] = useState<AssistantLanguage>("en");
-  const [seniorMode, setSeniorMode] = useState(false);
   const [useCaseContext, setUseCaseContext] = useState(false);
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [userCases, setUserCases] = useState<FraudCaseSummary[]>([]);
@@ -256,11 +256,7 @@ export default function AssistantPage() {
   };
 
   const handleSeniorModeToggle = () => {
-    const nextVal = !seniorMode;
-    setSeniorMode(nextVal);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("goldenhour_senior_mode", String(nextVal));
-    }
+    toggleSeniorMode();
   };
 
   const handleClearChat = () => {

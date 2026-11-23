@@ -130,12 +130,14 @@ class ClaudeService:
             quality_warning = ocr_res.get("quality_warning")
 
         sanitized_text, redacted = validation_service.inspect_and_sanitize_text(raw_text)
+        # Standardize full-width colons and OCR currency substitutions
+        sanitized_text = sanitized_text.replace("：", ":").replace("尺", "₹")
 
         # 1. 12-Digit UTR Number
         utr = None
-        # Match explicit label UTR / UPI Ref / Ref No
+        # Match explicit label UTR / UPI Ref / Ref No (with optional bracketed notes e.g. UTR (Bank Reference No.))
         utr_match = re.search(
-            r"(?:UTR|UPI\s*Ref(?:\s*No)?|Ref(?:erence)?\s*(?:No)?|Txn\s*ID)\s*[:\-]?\s*([0-9]{12})\b",
+            r"(?:UTR|UPI\s*Ref(?:\s*No)?|Ref(?:erence)?\s*(?:No)?|Txn\s*ID)\s*(?:\([^)]*\))?\s*[:\-]?\s*([0-9]{12})\b",
             sanitized_text,
             re.IGNORECASE
         )
@@ -163,7 +165,7 @@ class ClaudeService:
         # 2. Transaction Amount
         amount = None
         amt_match = re.search(
-            r"(?:₹|Rs\.?|INR|Paid)\s*[:\-]?\s*([0-9,]+(?:\.[0-9]{2})?)",
+            r"(?:Amount\s*[:\-]?\s*₹?|₹|Rs\.?|INR|Paid\s*[:\-]?\s*₹?)\s*[:\-]?\s*([0-9,]+(?:\.[0-9]{2})?)",
             sanitized_text,
             re.IGNORECASE
         )
@@ -205,10 +207,16 @@ class ClaudeService:
         # 4. Beneficiary Name
         beneficiary_name = None
         ben_name_match = re.search(
-            r"Paid to\s*[:\-]?\s*([A-Za-z0-9\s]{3,35})(?=\n|Q[0-9]|@|[0-9]|Payment|Transfer|$)",
+            r"Beneficiary\s*Name\s*[:\-]?\s*\n?\s*([A-Za-z0-9 ]{3,35})(?=\r?\n|$)",
             sanitized_text,
             re.IGNORECASE
         )
+        if not ben_name_match:
+            ben_name_match = re.search(
+                r"Paid to\s*[:\-]?\s*\n?\s*([A-Za-z0-9 ]{3,35})(?=\r?\n|@|[0-9]|Payment|Transfer|$)",
+                sanitized_text,
+                re.IGNORECASE
+            )
         if ben_name_match:
             beneficiary_name = ben_name_match.group(1).strip()
             # Clean up unwanted prefixes
@@ -219,24 +227,32 @@ class ClaudeService:
         date_str = None
         time_str = None
 
-        # Time pattern e.g. 04:28 pm or 16:28
+        # Prefer explicit 12-hour timestamp with AM/PM (e.g. 09:47 AM), otherwise 24-hour time
         time_match = re.search(
-            r"\b((?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:am|pm|AM|PM))\b",
+            r"((?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:am|pm|AM|PM))",
             sanitized_text
         )
+        if not time_match:
+            time_match = re.search(r"\b([01]?[0-9]|2[0-3]):[0-5][0-9]\b", sanitized_text)
         if time_match:
-            time_str = time_match.group(1)
+            time_str = time_match.group(1).strip()
 
-        # Date pattern e.g. 10 Nov 2026, 20 Nov 2026, 10/11/2026
+        # Date pattern e.g. 10 Nov 2026, 20 Nov 2026, 21Nov2026, 10/11/2026
         date_match = re.search(
-            r"\b([0-3]?[0-9]\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2})\b",
+            r"([0-3]?[0-9]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*20\d{2})",
             sanitized_text,
             re.IGNORECASE
         )
         if not date_match:
             date_match = re.search(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b", sanitized_text)
         if date_match:
-            date_str = date_match.group(1)
+            raw_date = date_match.group(1).strip()
+            # Normalize spacing e.g. "21Nov2026" -> "21 Nov 2026"
+            dm = re.match(r"([0-3]?[0-9])\s*([A-Za-z]+)\s*(20\d{2})", raw_date, re.IGNORECASE)
+            if dm:
+                date_str = f"{dm.group(1)} {dm.group(2).capitalize()} {dm.group(3)}"
+            else:
+                date_str = raw_date
 
         timestamp_str = None
         if date_str and time_str:
@@ -451,13 +467,16 @@ class ClaudeService:
 
             # Assign category to item
             ev_category = "UPI_RECEIPT"
-            summary_lower = (raw_summary + " " + filename).lower()
-            if any(w in summary_lower for w in ["sms", "alert", "message", "debited from", "a/c"]):
-                ev_category = "SMS_ALERT"
-            elif any(w in summary_lower for w in ["whatsapp", "chat", "telegram", "conversation", "hello", "hi"]):
-                ev_category = "WHATSAPP_CHAT"
-            elif any(w in summary_lower for w in ["statement", "passbook", "account statement"]):
+            content_lower = raw_summary.lower()
+            # If UTR, payment app, or transaction details are present, it is definitely a UPI receipt
+            if item_utr or item_ben_vpa or any(w in content_lower for w in ["phonepe", "gpay", "paytm", "upi ref", "transaction", "paid to", "payment mode"]):
+                ev_category = "UPI_RECEIPT"
+            elif any(w in content_lower for w in ["statement", "passbook", "account statement"]):
                 ev_category = "BANK_STATEMENT"
+            elif any(w in content_lower for w in ["sms", "alert", "message", "debited from", "a/c"]):
+                ev_category = "SMS_ALERT"
+            elif any(w in content_lower for w in ["whatsapp", "chat", "telegram", "conversation", "hello", "hi"]) or "chat" in filename.lower():
+                ev_category = "WHATSAPP_CHAT"
 
             # Propagate best detected fields
             if item_utr and not best_utr:
@@ -556,10 +575,15 @@ class ClaudeService:
             missing.append("12-digit UPI Transaction ID (UTR)")
         if not best_beneficiary_upi:
             missing.append("Beneficiary UPI ID / VPA")
-        if not best_fraudster_phone:
-            missing.append("Fraudster Phone Number")
         if not best_timestamp:
             missing.append("Transaction Date & Time")
+        # Fraudster phone number is only relevant if communication evidence (SMS or WhatsApp) is provided
+        has_comm_evidence = any(
+            it.get("category") in ["SMS_ALERT", "WHATSAPP_CHAT"]
+            for it in all_extracted_items
+        )
+        if has_comm_evidence and not best_fraudster_phone:
+            missing.append("Fraudster Phone Number")
 
         # Conflict & Quality Warnings
         fields: Dict[str, Any] = {}

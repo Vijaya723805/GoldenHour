@@ -16,7 +16,14 @@ try:
 except ImportError:
     WINSDK_AVAILABLE = False
 
-# Optional PaddleOCR support
+# Optional PaddleOCR / RapidOCR support
+RAPIDOCR_AVAILABLE = False
+try:
+    from rapidocr_onnxruntime import RapidOCR
+    RAPIDOCR_AVAILABLE = True
+except ImportError:
+    RAPIDOCR_AVAILABLE = False
+
 PADDLEOCR_AVAILABLE = False
 try:
     from paddleocr import PaddleOCR
@@ -28,6 +35,15 @@ except ImportError:
 class OCRService:
     def __init__(self):
         self.paddle_engine = None
+        self.rapid_engine = None
+
+        if RAPIDOCR_AVAILABLE:
+            try:
+                self.rapid_engine = RapidOCR()
+            except Exception as e:
+                print(f"[OCRService] RapidOCR initialization error: {e}")
+                self.rapid_engine = None
+
         if PADDLEOCR_AVAILABLE:
             try:
                 self.paddle_engine = PaddleOCR(use_angle_cls=True, lang="en")
@@ -36,6 +52,8 @@ class OCRService:
 
     @property
     def ocr_engine(self):
+        if self.rapid_engine:
+            return "paddleocr_rapid"
         if WINSDK_AVAILABLE:
             return "windows_native_ocr"
         return self.paddle_engine
@@ -144,13 +162,28 @@ class OCRService:
         extracted_text = ""
         engine_used = "none"
 
-        # 2. Try Windows Native OCR
-        if WINSDK_AVAILABLE and png_bytes:
+        # 2. Try RapidOCR (PaddleOCR ONNX engine - fast, lightweight, accurate)
+        if self.rapid_engine:
+            try:
+                res, _ = self.rapid_engine(file_path)
+                lines = []
+                if res:
+                    for item in res:
+                        if item and len(item) > 1 and item[1]:
+                            lines.append(item[1].strip())
+                if lines:
+                    extracted_text = "\n".join(lines)
+                    engine_used = "paddleocr_rapid"
+            except Exception as e:
+                print(f"[OCRService] RapidOCR error: {e}")
+
+        # 3. Try Windows Native OCR if RapidOCR did not extract text
+        if (not extracted_text or len(extracted_text.strip()) < 10) and WINSDK_AVAILABLE and png_bytes:
             extracted_text = self._extract_with_winsdk(png_bytes)
             if extracted_text and len(extracted_text.strip()) > 10:
                 engine_used = "windows_native_ocr"
 
-        # 3. Fallback to PaddleOCR if available
+        # 4. Fallback to PaddleOCR if available
         if (not extracted_text or len(extracted_text.strip()) < 10) and self.paddle_engine:
             try:
                 res = self.paddle_engine.ocr(file_path, cls=True)
@@ -165,6 +198,8 @@ class OCRService:
                 print(f"[OCRService] PaddleOCR error: {e}")
 
         clean_text = extracted_text.strip()
+        # Normalize full-width colons and OCR currency substitutions
+        clean_text = clean_text.replace("：", ":").replace("尺", "₹")
         is_blurry = len(clean_text) < 15
         warning = "Screenshot text appears blurry, low-resolution, or unreadable." if is_blurry else None
 

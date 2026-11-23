@@ -42,7 +42,9 @@ import {
   deleteFollowUpNote,
   updateComplaintStatus,
   generateCaseComplaints,
-  fetchOfficialReportingLinks
+  fetchOfficialReportingLinks,
+  downloadComplaintPdfBlob,
+  getComplaintPdfDownloadUrl
 } from "@/lib/api-client";
 import {
   FraudCaseSummary,
@@ -65,7 +67,7 @@ const STATUS_LABELS: Record<ComplaintStatus, { label: string; badgeClass: string
 
 export default function EmergencyResponseDashboardPage() {
   const { token } = useAuth();
-  const { t, formatCurrency, formatDateTime } = useLanguage();
+  const { language, t, formatCurrency, formatDateTime } = useLanguage();
 
   const [cases, setCases] = useState<FraudCaseSummary[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("");
@@ -100,7 +102,8 @@ export default function EmergencyResponseDashboardPage() {
 
   // Documents state
   const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
-  const [previewDoc, setPreviewDoc] = useState<{ title: string; content: string } | null>(null);
+  const [downloadingDocType, setDownloadingDocType] = useState<string | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<{ type?: string; title: string; content: string } | null>(null);
   const [copiedDoc, setCopiedDoc] = useState(false);
 
   // Official links
@@ -314,19 +317,31 @@ export default function EmergencyResponseDashboardPage() {
   };
 
   // Preview or Download Document
-  const handlePreviewDoc = (title: string, content: string) => {
-    setPreviewDoc({ title, content });
+  const handlePreviewDoc = (type: string, title: string, content: string) => {
+    setPreviewDoc({ type, title, content });
     setCopiedDoc(false);
   };
 
-  const handleDownloadDoc = (title: string, content: string) => {
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${title.toLowerCase().replace(/[^a-z0-9]/g, "_")}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleDownloadDoc = async (docType: string, title: string) => {
+    const activeCase = selectedCaseId || cases[0]?.id || "case_101";
+    setDownloadingDocType(docType);
+    try {
+      const blob = await downloadComplaintPdfBlob(activeCase, docType, language, token);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${title.toLowerCase().replace(/[^a-z0-9]/g, "_")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast("success", `${title} PDF downloaded successfully.`);
+    } catch (err: any) {
+      console.error("PDF download error:", err);
+      showToast("error", "Could not generate PDF. Please ensure backend is running.");
+    } finally {
+      setDownloadingDocType(null);
+    }
   };
 
   const stage10m = tracking?.checklist_items.filter((i) => i.stage === "WITHIN_10_MINUTES") || [];
@@ -1146,20 +1161,27 @@ export default function EmergencyResponseDashboardPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handlePreviewDoc(doc.title, doc.sampleContent)}
+                        onClick={() => handlePreviewDoc(doc.type, doc.title, doc.sampleContent)}
                         className="text-xs border-[#DCE7F0] text-[#172F4D] hover:bg-[#F1F6FB] flex items-center gap-1.5"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         {t("emer.doc_preview", "Preview")}
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleDownloadDoc(doc.title, doc.sampleContent)}
-                        className="bg-[#172F4D] text-white hover:bg-[#263F61] text-xs flex items-center gap-1.5 shadow-sm"
+                      <a
+                        href={getComplaintPdfDownloadUrl(selectedCaseId || cases[0]?.id || "case_101", doc.type, language, token)}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="inline-flex"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        {t("emer.doc_download", "Download")}
-                      </Button>
+                        <Button
+                          size="sm"
+                          className="bg-[#172F4D] text-white hover:bg-[#263F61] text-xs flex items-center gap-1.5 shadow-sm min-w-[115px] justify-center cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>{t("emer.doc_download", "Download PDF")}</span>
+                        </Button>
+                      </a>
                     </CardContent>
                   </Card>
                 ))}
@@ -1292,14 +1314,21 @@ export default function EmergencyResponseDashboardPage() {
               </Button>
 
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleDownloadDoc(previewDoc.title, previewDoc.content)}
-                  className="bg-[#172F4D] text-white hover:bg-[#263F61] text-xs flex items-center gap-1.5"
+                <a
+                  href={getComplaintPdfDownloadUrl(selectedCaseId || cases[0]?.id || "case_101", previewDoc?.type || "BANK_FRAUD_COMPLAINT", language, token)}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  className="inline-flex"
                 >
-                  <Download className="w-4 h-4" />
-                  {t("common.download", "Download")}
-                </Button>
+                  <Button
+                    size="sm"
+                    className="bg-[#172F4D] text-white hover:bg-[#263F61] text-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Official PDF</span>
+                  </Button>
+                </a>
                 <Button
                   variant="outline"
                   size="sm"

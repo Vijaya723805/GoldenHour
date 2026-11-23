@@ -507,21 +507,22 @@ class ExtractionService:
 
     # Helper Extractors
     def _extract_utr(self, text: str) -> Optional[str]:
-        # Typical 12-digit UTR labeled explicitly
-        match = re.search(r"\b(?:utr|ref|reference|txn|transaction|rrn)[\s:=#\-]*([0-9]{12})\b", text, re.IGNORECASE)
+        # Typical 12-digit UTR labeled explicitly (with optional bracketed notes e.g. UTR (Bank Reference No.))
+        match = re.search(r"(?:utr|upi\s*ref(?:\s*no)?|ref(?:erence)?\s*(?:no)?|txn|transaction|rrn)\s*(?:\([^)]*\))?[\s:=#\-]*([0-9]{12})\b", text, re.IGNORECASE)
         if match:
             return match.group(1)
         # Standalone 12-digit number (excluding Indian phone numbers +91 or 91 followed by 10 digits starting 6-9)
-        matches = re.findall(r"\b([0-9]{12})\b", text)
+        matches = re.findall(r"(?<![0-9])([0-9]{12})(?![0-9])", text)
         for m in matches:
             if m.startswith("91") and m[2] in "6789":
-                # Check if preceded by + or in phone context
                 continue
             return m
         return None
 
     def _extract_amount(self, text: str) -> Optional[float]:
-        match = re.search(r"(?:₹|Rs\.?|INR)\s*([0-9,]+(?:\.[0-9]{2})?)", text, re.IGNORECASE)
+        # Normalize full-width colons and OCR currency substitutions
+        norm = text.replace("：", ":").replace("尺", "₹")
+        match = re.search(r"(?:Amount\s*[:\-]?\s*₹?|₹|Rs\.?|INR|Paid\s*[:\-]?\s*₹?)\s*[:\-]?\s*([0-9,]+(?:\.[0-9]{2})?)", norm, re.IGNORECASE)
         if match:
             try:
                 return float(match.group(1).replace(",", ""))
@@ -534,9 +535,14 @@ class ExtractionService:
         return re.findall(r"\b([a-zA-Z0-9\.\-_]{2,50}@[a-zA-Z0-9\-_]{2,30})\b", text)
 
     def _extract_phone(self, text: str) -> Optional[str]:
-        match = re.search(r"(?:\+91[\-\s]?)?([6-9]\d{9})\b", text)
-        if match:
-            return f"+91{match.group(1)}"
+        # Strict boundary check so it does not match inside Txn IDs or UTRs
+        for cand in re.finditer(r"(?<![0-9a-zA-Z])(?:\+91[\-\s]?|91[\-\s]?)?([6-9]\d{9})(?![0-9a-zA-Z])", text):
+            # Check context to ensure it's not part of a UTR or reference ID
+            start, end = cand.start(), cand.end()
+            ctx = text[max(0, start - 15):min(len(text), end + 15)].lower()
+            if any(k in ctx for k in ["utr", "txn", "transaction", "ref"]):
+                continue
+            return f"+91{cand.group(1)}"
         return None
 
     def _extract_suspicious_patterns(self, text: str) -> List[str]:
